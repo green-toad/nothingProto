@@ -1,0 +1,19 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="NetDriver">
+      <HintPath>../../ReMessenger\lib/NetDriver/NetDriver.dll</HintPath>
+    </Reference>
+    <Reference Include="AVcontrol">
+      <HintPath>..\..\ReMessenger\lib\AVcontrol\AVcontrol.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
+</Project>

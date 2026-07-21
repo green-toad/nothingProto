@@ -1,0 +1,2 @@
+/home/nyashka/projects/csP/testProto/ServerSide/bin/Release/net10.0/linux-x64/publish/ServerSide.pdb
+/home/nyashka/projects/csP/testProto/ServerSide/bin/Release/net10.0/linux-x64/publish/ServerSide
