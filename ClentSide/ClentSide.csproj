@@ -14,6 +14,9 @@
     <Reference Include="AVcontrol">
       <HintPath>..\..\ReMessenger\lib\AVcontrol\AVcontrol.dll</HintPath>
     </Reference>
+    <Reference Include="AVcontrol">
+      <HintPath>..\..\ReMessenger\lib\JabrAPI/Preview/JabrAPI.dll</HintPath>
+    </Reference>
   </ItemGroup>
 
 </Project>
