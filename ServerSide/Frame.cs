@@ -25,6 +25,7 @@ namespace ServerSide
         {
             var frame = new Frame();
             frame.type = (Type)content[0];
+            frame.content = new byte[content.Length - 1];
             Buffer.BlockCopy(content, 1, frame.content, 0, content.Length - 1);
             return frame;
         }

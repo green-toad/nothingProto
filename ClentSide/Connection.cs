@@ -87,16 +87,6 @@ namespace ClientSide
                 await ReadFullAsync(_stream, portBytes, 0, 2);
                 targetPort = (portBytes[0] << 8) | portBytes[1];
                 
-                // здесь надо навернуть первичный хендшейк
-                // Console.WriteLine("попытка приконектится");
-                // Console.WriteLine(_networker);
-                // Console.WriteLine($"{targetHost}~:~{targetPort}");
-                // var res = await _networker.Send(true, Encoding.ASCII.GetBytes($"{targetHost}~:~{targetPort}"), 10 * 1000);
-                // Console.WriteLine(Encoding.ASCII.GetString(res.content));
-                // if (Encoding.ASCII.GetString(res.content) != "OK") throw new Exception("server is fucked");
-                // Console.WriteLine("заебок, получилось");
-
-                //  так, регистрация идет в три шага, инициализируется от клиента
 
                 Console.WriteLine("step 1");
                 var res = await _networker.Send(true, Frame.Pack(new Frame() {type = Frame.Type.firstInitalizeStep, content = ToBinary.ASCII($"{targetHost}~:~{targetPort}")}), 10 * 1000);
@@ -109,10 +99,6 @@ namespace ClientSide
                     Console.WriteLine("step 3");
                     _eManager.SetOtherKey(res.content);
                 }
-
-                
-
-                Console.WriteLine("step 3");
                 
                 byte[] reply = new byte[]
                 {
@@ -165,7 +151,7 @@ namespace ClientSide
                     byte[] chunk = new byte[bytesRead];
                     Array.Copy(readBuffer, 0, chunk, 0, bytesRead);
 
-                    await _networker.Send(false, chunk);
+                    await _networker.Send(false, Frame.Pack(new Frame() {type = Frame.Type.content, content = _eManager.Encrypt(chunk)}));
                 }
                 catch(Exception e)
                 {
@@ -177,7 +163,7 @@ namespace ClientSide
         private async Task Reading(ResultContent content)
         {
             if (!_stream.CanWrite) return;
-            await _stream.WriteAsync(content.content);
+            await _stream.WriteAsync(_eManager.Decrypt(content.content));
         }
 
         public async ValueTask DisposeAsync()

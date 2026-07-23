@@ -27,5 +27,9 @@ namespace ServerSide
         {
             return RE5.Decrypt.WithNoise.Binary([.. content], _otherReKey).ToArray();
         }
+        public byte[] EncryptOther(byte[] content)
+        {
+            return RE5.Encrypt.WithNoise.Binary([.. content], _otherReKey).ToArray();
+        }
     }
 }
