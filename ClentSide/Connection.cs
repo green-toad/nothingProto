@@ -23,6 +23,7 @@ namespace ClientSide
         public Connection(TcpClient listener)
         {
             _socket.Connect(new IPEndPoint(IPAddress.Parse("144.31.71.55"), 22233));
+            // _socket.Connect(new IPEndPoint(IPAddress.Parse("127.0.0.1"), 22233));
             _networker = new(_socket, Reading);
             _client = listener;
             
@@ -89,13 +90,16 @@ namespace ClientSide
                 
 
                 Console.WriteLine("step 1");
-                var res = await _networker.Send(true, Frame.Pack(new Frame() {type = Frame.Type.firstInitalizeStep, content = ToBinary.ASCII($"{targetHost}~:~{targetPort}")}), 10 * 1000);
+                var res = await _networker.Send(true, Frame.Pack(new Frame() {type = Frame.Type.firstInitalizeStep, content = ToBinary.ASCII($"{targetHost}~:~{targetPort}")}), 10000 * 1000);
                 using (var RSAkey = RSA.Create())
                 {
+                    Console.WriteLine(res);
+                    Console.WriteLine(res.content);
+                    Console.WriteLine(res.type);
                     RSAkey.ImportRSAPublicKey(res.content, out _);
 
                     Console.WriteLine("step 2");
-                    res = await _networker.Send(true, Frame.Pack(new Frame() {type = Frame.Type.secondInitializationStep, content = RSAkey.Encrypt(_eManager.GetMyKey(), RSAEncryptionPadding.Pkcs1)}));
+                    res = await _networker.Send(true, Frame.Pack(new Frame() {type = Frame.Type.secondInitializationStep, content = RSAkey.Encrypt(_eManager.GetMyKey(), RSAEncryptionPadding.Pkcs1)}), 10000 * 1000);
                     Console.WriteLine("step 3");
                     _eManager.SetOtherKey(res.content);
                 }

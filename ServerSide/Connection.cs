@@ -16,15 +16,17 @@ namespace ServerSide
         private readonly TcpClient _client;
         private readonly EncryptManager _eManager = new();
         private readonly CancellationTokenSource _cts = new();
-        private readonly RSA _rsaKey = RSA.Create(8192);
-
+        private readonly RSA _rsaKey;
+        private readonly byte[] _rsaExport;
         public readonly Task working;
 
-        public Connection(Socket con)
+        public Connection(Socket con, RSA rsa, byte[] export)
         {
             _networker = new(con, Reciver);
             _client = new TcpClient();
             working = Task.Run(Sending);
+            _rsaExport = export;
+            _rsaKey = rsa;
         }
 
         private async Task Reciver(ResultContent content)
@@ -62,7 +64,7 @@ namespace ServerSide
                     _stream = _client.GetStream();
                     Console.WriteLine("ответил, что все норм!");
 
-                    await _networker.Answer(_rsaKey.ExportRSAPublicKey(), content.frameuid.Value);
+                    await _networker.Answer(_rsaExport, content.frameuid.Value);
                     break;
                 case Frame.Type.secondInitializationStep:
                     _eManager.SetOtherKey(_rsaKey.Decrypt(pack.content, RSAEncryptionPadding.Pkcs1));
@@ -121,7 +123,6 @@ namespace ServerSide
                 Console.WriteLine($"Ошибка при освобождении: {ex.Message}");
             }
             _cts.Dispose();
-            _rsaKey.Dispose();
             _client.Dispose();
         }
     }
