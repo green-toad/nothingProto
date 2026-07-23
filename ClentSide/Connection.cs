@@ -17,7 +17,7 @@ namespace ClientSide
         private readonly NetworkStream _stream; 
         private readonly Networker _networker;
         private readonly Socket _socket = new(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-        private readonly EncryptManager _eManager = new();
+        private readonly EncryptionDevice _eManager = new();
         public Task working;
 
         public Connection(TcpClient listener)
@@ -29,6 +29,7 @@ namespace ClientSide
             
             _stream = _client.GetStream();
         }
+
         public async Task<bool> Configurate()
         {
             try
@@ -89,27 +90,45 @@ namespace ClientSide
                 targetPort = (portBytes[0] << 8) | portBytes[1];
                 
 
-                Console.WriteLine("step 1");
-                var res = await _networker.Send(true, Frame.Pack(new Frame() {type = Frame.Type.firstInitalizeStep, content = ToBinary.ASCII($"{targetHost}~:~{targetPort}")}), 10000 * 1000);
+                Console.Write("step 1\n");
+                var res = await _networker.Send(true, Frame.Pack(new Frame()
+                    { type = Frame.Type.firstInitalizeStep, content = ToBinary.ASCII($"{targetHost}~:~{targetPort}")
+                    }), 10000 * 1000);
+                
+                if (res == null) throw new ArgumentNullException(nameof(res), "Контент нетдрайвера выпал за борт :(");
+
+
+                _eManager.ApplyCustomSettings();
+
                 using (var RSAkey = RSA.Create())
                 {
-                    Console.WriteLine(res);
-                    Console.WriteLine(res.content);
-                    Console.WriteLine(res.type);
+                    Console.Write(res + "\n" + res.content + "\n" + res.type + "\n");
                     RSAkey.ImportRSAPublicKey(res.content, out _);
 
-                    Console.WriteLine("step 2");
-                    res = await _networker.Send(true, Frame.Pack(new Frame() {type = Frame.Type.secondInitializationStep, content = RSAkey.Encrypt(_eManager.GetMyKey(), RSAEncryptionPadding.Pkcs1)}), 10000 * 1000);
-                    Console.WriteLine("step 3");
-                    _eManager.SetOtherKey(res.content);
+                    Console.Write("step 2\n");
+                    res = await _networker.Send(true, Frame.Pack(new Frame()
+                        { type = Frame.Type.secondInitializationStep, content = RSAkey.Encrypt(_eManager.ExportSendKey(), RSAEncryptionPadding.Pkcs1)
+                        }), 10000 * 1000);
+
+                    if (res == null) throw new ArgumentNullException(nameof(res), "Контент нетдрайвера погиб в бочке:(");
+
+                    Console.Write("step 3\n");
+                    _eManager.ImportEncryptedReceiveKey(res.content);
                 }
-                
-                byte[] reply = new byte[]
-                {
+
+                var gotThisBS = _eManager.ExportReceiveKey();
+                StringBuilder sb = new();
+                Console.Write("\n\tReceived reKey after handshake:\n ");
+                foreach (Byte aboba in gotThisBS) sb.Append(aboba);
+                Console.Write(sb.ToString() + "\n\n    ");
+
+
+                byte[] reply =
+                [
                     5, 0, 0, 1,
                     0, 0, 0, 0,
                     0, 0
-                };
+                ];
                 await _stream.WriteAsync(reply, 0, reply.Length);
 
                 working = Task.Run(Working);
