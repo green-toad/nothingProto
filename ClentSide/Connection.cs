@@ -3,7 +3,9 @@ using System.Buffers;
 using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Sockets;
+using System.Security.Cryptography;
 using System.Text;
+using AVcontrol;
 using NetDriver.AE;
 
 namespace ClientSide
@@ -15,6 +17,7 @@ namespace ClientSide
         private readonly NetworkStream _stream; 
         private readonly Networker _networker;
         private readonly Socket _socket = new(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+        private readonly EncryptManager _eManager = new();
         public Task working;
 
         public Connection(TcpClient listener)
@@ -96,8 +99,18 @@ namespace ClientSide
                 //  так, регистрация идет в три шага, инициализируется от клиента
 
                 Console.WriteLine("step 1");
+                var res = await _networker.Send(true, Frame.Pack(new Frame() {type = Frame.Type.firstInitalizeStep, content = ToBinary.ASCII($"{targetHost}~:~{targetPort}")}), 10 * 1000);
+                using (var RSAkey = RSA.Create())
+                {
+                    RSAkey.ImportRSAPublicKey(res.content, out _);
 
-                Console.WriteLine("step 2");
+                    Console.WriteLine("step 2");
+                    res = await _networker.Send(true, Frame.Pack(new Frame() {type = Frame.Type.secondInitializationStep, content = RSAkey.Encrypt(_eManager.GetMyKey(), RSAEncryptionPadding.Pkcs1)}));
+                    Console.WriteLine("step 3");
+                    _eManager.SetOtherKey(res.content);
+                }
+
+                
 
                 Console.WriteLine("step 3");
                 

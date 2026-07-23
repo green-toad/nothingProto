@@ -1,6 +1,6 @@
 using JabrAPI;
 
-namespace Shared
+namespace ServerSide
 {
     public class EncryptManager
     {

@@ -1,10 +1,10 @@
 using System.Buffers;
 
-namespace Shared
+namespace ServerSide
 {
     public class Frame
     {
-        public byte type;
+        public Type type;
         public byte[] content;
 
         public enum Type : byte
@@ -16,7 +16,7 @@ namespace Shared
 
         public static byte[] Pack(Frame frame)
         {
-            byte content = new byte[1 + frame.content.Length];
+            byte[] content = new byte[1 + frame.content.Length];
             content[0] = (byte)frame.type;
             Buffer.BlockCopy(frame.content, 0, content, 1, frame.content.Length);
             return content;
@@ -24,8 +24,9 @@ namespace Shared
         public static Frame Unpack(byte[] content)
         {
             var frame = new Frame();
-            frame.type = (frame.Type)content[0];
+            frame.type = (Type)content[0];
             Buffer.BlockCopy(content, 1, frame.content, 0, content.Length - 1);
+            return frame;
         }
     }
 }

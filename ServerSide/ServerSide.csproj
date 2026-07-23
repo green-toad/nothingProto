@@ -14,8 +14,8 @@
     <Reference Include="AVcontrol">
       <HintPath>..\..\ReMessenger\lib\AVcontrol\AVcontrol.dll</HintPath>
     </Reference>
-    <Reference Include="AVcontrol">
-      <HintPath>..\..\ReMessenger\lib\JabrAPI/Preview/JabrAPI.dll</HintPath>
+    <Reference Include="JabrAPI">
+      <HintPath>..\..\ReMessenger/lib/JabrAPI/Preview/21.07 New extended only new camouflage/JabrAPI.dll</HintPath>
     </Reference>
   </ItemGroup>
 
