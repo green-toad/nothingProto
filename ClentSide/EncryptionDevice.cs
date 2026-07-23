@@ -20,6 +20,8 @@ namespace ClientSide
         public void ApplyCustomSettings()
         {
             _sendReKey.Set.Default();
+            //_sendReKey.Set.ShiftCount(3);
+
             _sendReKey.Noisifier.settings = new()
             {
                 DynamicOutputIntervals =
@@ -51,6 +53,7 @@ namespace ClientSide
                 ComplexNoisePairBiasPercents = 25.0,
                 ComplexNoiseIntervalBiasPercents = 66.66
             };
+            _sendReKey.Next();
         }
         public void UpdateSendKey() => _sendReKey.Next();
 

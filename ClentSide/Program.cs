@@ -12,6 +12,21 @@ namespace ClientSide
     {
         public static async Task Main(string[] args)
         {
+            double min = double.MaxValue, max = double.MinValue, avg = 0.0;
+            for (var i = 0; i < 33; i++)
+            {
+                Byte[] reKeyExportTest = Connection.TestEncryptionDevice();
+                Console.Write($"\n\tTypical reKey generated, size: {reKeyExportTest.Length}(bytes)");
+                min = Math.Min(min, reKeyExportTest.Length);
+                max = Math.Max(max, reKeyExportTest.Length);
+                avg += reKeyExportTest.Length;
+            }
+            avg /= 33;
+            Console.Write($"\n\tMin: {min}, Max: {max}, Avg: {avg}\n\nНажми любую хрень чтобы продолжить ");
+            Console.ReadKey();
+            Console.Clear();
+
+
             var listener = new TcpListener(IPAddress.Parse("127.0.0.1"), 8888);
             listener.Start();
 

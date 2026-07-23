@@ -196,5 +196,13 @@ namespace ClientSide
             _cts.Dispose();
             _client.Dispose();
         }
+
+
+        static public Byte[] TestEncryptionDevice()
+        {
+            EncryptionDevice encDevice = new();
+            encDevice.ApplyCustomSettings();
+            return encDevice.ExportSendKey();
+        }
     }
 }
