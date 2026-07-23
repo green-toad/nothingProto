@@ -4,14 +4,14 @@ using static JabrAPI.OutputInterval.IntervalFilters.FilterSelectionState;
 
 
 
-namespace ClientSide
+namespace ServerSide
 {
     public class EncryptionDevice
     {
-        private readonly RE5.BinaryKey _sendReKey    = new();
+        private readonly RE5.BinaryKey _sendReKey = new();
         private readonly RE5.BinaryKey _receiveReKey = new();
 
-        public byte[] ExportSendKey()    => _sendReKey.ExportAsBinary();
+        public byte[] ExportSendKey() => _sendReKey.ExportAsBinary();
         public byte[] ExportReceiveKey() => _receiveReKey.ExportAsBinary();
 
 
@@ -56,7 +56,7 @@ namespace ClientSide
 
         public void ImportEncryptedReceiveKey(byte[] keyExport)
             => _receiveReKey.ImportFromBinary(RE5.Decrypt.WithNoise.Binary([.. keyExport], _sendReKey));
-        
+
 
         public byte[] Encrypt(byte[] content)
             => [.. RE5.Encrypt.WithNoise.Binary([.. content], _sendReKey)];
