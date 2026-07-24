@@ -7,6 +7,7 @@ using System.Security.Cryptography;
 using System.Text;
 using AVcontrol;
 using NetDriver.AE;
+using Shared;
 
 namespace ClientSide
 {
@@ -92,8 +93,10 @@ namespace ClientSide
 
                 Console.Write("step 1\n");
                 var res = await _networker.Send(true, Frame.Pack(new Frame()
-                    { type = Frame.Type.firstInitalizeStep, content = ToBinary.ASCII($"{targetHost}~:~{targetPort}")
-                    }), 10000 * 1000);
+                    { 
+                        type = Frame.Type.firstInitalizeStep, 
+                        content = ToBinary.ASCII($"{targetHost}~:~{targetPort}")
+                    }), 10 * 1000);
                 
                 if (res == null) throw new ArgumentNullException(nameof(res), "Контент нетдрайвера выпал за борт :(");
 
@@ -108,7 +111,7 @@ namespace ClientSide
                     Console.Write("step 2\n");
                     res = await _networker.Send(true, Frame.Pack(new Frame()
                         { type = Frame.Type.secondInitializationStep, content = RSAkey.Encrypt(_eManager.ExportSendKey(), RSAEncryptionPadding.Pkcs1)
-                        }), 10000 * 1000);
+                        }), 10 * 1000);
 
                     if (res == null) throw new ArgumentNullException(nameof(res), "Контент нетдрайвера погиб в бочке:(");
 

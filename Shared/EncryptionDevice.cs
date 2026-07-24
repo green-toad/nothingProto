@@ -1,11 +1,10 @@
 using JabrAPI;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 using static JabrAPI.OutputInterval.IntervalFilters.FilterType;
 using static JabrAPI.OutputInterval.IntervalFilters.FilterSelectionState;
 
 
 
-namespace ClientSide
+namespace Shared
 {
     public class EncryptionDevice
     {
@@ -56,6 +55,9 @@ namespace ClientSide
 
 
         public void ImportEncryptedReceiveKey(byte[] keyExport)
+            => _receiveReKey.ImportFromBinary(RE5.Decrypt.WithNoise.Binary([.. keyExport], _sendReKey));
+        
+        public void ImportEncryptedReceiveKeyWithoutDecrypt(byte[] keyExport)
             => _receiveReKey.ImportFromBinary(RE5.Decrypt.WithNoise.Binary([.. keyExport], _sendReKey));
         
 
