@@ -21,7 +21,7 @@ namespace ClientSide
             var cleanTask = CleanupLoop(workers, cts.Token);
             var acceptTask = AcceptLoopAsync(listener, workers, cts.Token);
 
-            Console.WriteLine("Сервер запущен. Нажмите любую клавишу для остановки...");
+            Console.WriteLine("Прокси запущен. Нажмите любую клавишу для остановки...");
             Console.ReadKey();
 
             cts.Cancel();

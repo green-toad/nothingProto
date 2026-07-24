@@ -5,6 +5,7 @@ using System.Net.Sockets;
 using System.Text;
 using System.Security.Cryptography;
 using AVcontrol;
+using Shared;
 
 
 namespace ServerSide
@@ -14,7 +15,7 @@ namespace ServerSide
         private readonly Networker _networker;
         private NetworkStream _stream;
         private readonly TcpClient _client;
-        private readonly EncryptManager _eManager = new();
+        private readonly EncryptionDevice _eManager = new();
         private readonly CancellationTokenSource _cts = new();
         private readonly RSA _rsaKey;
         private readonly byte[] _rsaExport;
@@ -48,8 +49,8 @@ namespace ServerSide
                     await _networker.Answer(_rsaExport, content.frameuid.Value);
                     break;
                 case Frame.Type.secondInitializationStep:
-                    _eManager.SetOtherKey(_rsaKey.Decrypt(pack.content, RSAEncryptionPadding.Pkcs1));
-                    await _networker.Answer(_eManager.EncryptOther(_eManager.GetMyKey()), content.frameuid.Value);
+                    _eManager.ImportEncryptedReceiveKeyWithoutDecrypt(_rsaKey.Decrypt(pack.content, RSAEncryptionPadding.Pkcs1));
+                    await _networker.Answer(_eManager.EncryptWithReciveKey(_eManager.ExportSendKey()), content.frameuid.Value);
                     break;
                 case Frame.Type.content:
                     Console.WriteLine("эта херь - пакет!");

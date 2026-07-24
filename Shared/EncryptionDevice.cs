@@ -58,8 +58,11 @@ namespace Shared
             => _receiveReKey.ImportFromBinary(RE5.Decrypt.WithNoise.Binary([.. keyExport], _sendReKey));
         
         public void ImportEncryptedReceiveKeyWithoutDecrypt(byte[] keyExport)
-            => _receiveReKey.ImportFromBinary(RE5.Decrypt.WithNoise.Binary([.. keyExport], _sendReKey));
+            => _receiveReKey.ImportFromBinary([.. keyExport]);
         
+        public byte[] EncryptWithReciveKey(byte[] content)
+            => [.. RE5.Encrypt.WithNoise.Binary([.. content], _receiveReKey)];
+
 
         public byte[] Encrypt(byte[] content)
             => [.. RE5.Encrypt.WithNoise.Binary([.. content], _sendReKey)];
