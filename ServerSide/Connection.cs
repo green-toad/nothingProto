@@ -32,25 +32,6 @@ namespace ServerSide
         private async Task Reciver(ResultContent content)
         {
             Console.WriteLine("че то поймал!");
-            // if (!isConfigurated && content.type == ResultContent.Type.from)
-            // {
-            //     Console.WriteLine("это херь на подключение!");
-            //     var res = Encoding.ASCII.GetString(content.content).Split("~:~");
-            //     Console.WriteLine($"{res[0]} : {res[1]}");
-
-            //     await _client.ConnectAsync(IPAddress.Parse(res[0]), int.Parse(res[1]), _cts.Token);
-            //     // заменим пока что на перегон на хрей
-            //     // await _client.ConnectAsync(IPAddress.Parse("127.0.0.1"), 1081, _cts.Token);
-                
-            //     isConfigurated = true;
-            //     _stream = _client.GetStream();
-            //     Console.WriteLine("ответил, что все норм!");
-            //     await _networker.Answer(Encoding.ASCII.GetBytes("OK"), content.frameuid.Value);
-            //     return;
-            // }
-
-            // Console.WriteLine("эта херь - пакет!");
-            // await _stream.WriteAsync(content.content, _cts.Token);
 
             var pack = Frame.Unpack(content.content);
             switch(pack.type)
