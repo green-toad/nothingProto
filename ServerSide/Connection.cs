@@ -14,7 +14,7 @@ namespace ServerSide
         private readonly Networker _networker;
         private NetworkStream _stream;
         private readonly TcpClient _client;
-        private readonly EncryptionDevice _eManager = new();
+        private readonly EncryptManager _eManager = new();
         private readonly CancellationTokenSource _cts = new();
         private readonly RSA _rsaKey;
         private readonly byte[] _rsaExport;
@@ -41,7 +41,7 @@ namespace ServerSide
             //     await _client.ConnectAsync(IPAddress.Parse(res[0]), int.Parse(res[1]), _cts.Token);
             //     // заменим пока что на перегон на хрей
             //     // await _client.ConnectAsync(IPAddress.Parse("127.0.0.1"), 1081, _cts.Token);
-
+                
             //     isConfigurated = true;
             //     _stream = _client.GetStream();
             //     Console.WriteLine("ответил, что все норм!");
@@ -52,11 +52,7 @@ namespace ServerSide
             // Console.WriteLine("эта херь - пакет!");
             // await _stream.WriteAsync(content.content, _cts.Token);
 
-
-            _eManager.ApplyCustomSettings();
-
             var pack = Frame.Unpack(content.content);
-
             switch(pack.type)
             {
                 case Frame.Type.firstInitalizeStep:
@@ -71,21 +67,14 @@ namespace ServerSide
                     await _networker.Answer(_rsaExport, content.frameuid.Value);
                     break;
                 case Frame.Type.secondInitializationStep:
-                    _eManager.ImportEncryptedReceiveKey(_rsaKey.Decrypt(pack.content, RSAEncryptionPadding.Pkcs1));
-                    await _networker.Answer(_eManager.Encrypt(_eManager.ExportSendKey()), content.frameuid.Value);
+                    _eManager.SetOtherKey(_rsaKey.Decrypt(pack.content, RSAEncryptionPadding.Pkcs1));
+                    await _networker.Answer(_eManager.EncryptOther(_eManager.GetMyKey()), content.frameuid.Value);
                     break;
                 case Frame.Type.content:
                     Console.WriteLine("эта херь - пакет!");
                     await _stream.WriteAsync(_eManager.Decrypt(pack.content), _cts.Token);
                     break;
             }
-
-
-            var gotThisBS = _eManager.ExportReceiveKey();
-            StringBuilder sb = new();
-            Console.Write("\n\tReceived reKey after handshake:\n ");
-            foreach (Byte aboba in gotThisBS) sb.Append(aboba);
-            Console.Write(sb.ToString() + "\n\n    ");
         }
 
         private async Task Sending()

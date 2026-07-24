@@ -1,4 +1,5 @@
 using JabrAPI;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 using static JabrAPI.OutputInterval.IntervalFilters.FilterType;
 using static JabrAPI.OutputInterval.IntervalFilters.FilterSelectionState;
 
