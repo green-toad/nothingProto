@@ -1,6 +1,7 @@
+using System;
 using System.Buffers;
 
-namespace ClientSide
+namespace Shared
 {
     public class Frame
     {
