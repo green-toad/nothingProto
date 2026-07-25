@@ -8,11 +8,11 @@
   </PropertyGroup>
 
    <ItemGroup>
+    <Reference Include="AVcontrol">
+      <HintPath>..\lib\AVcontrol\Preview\AVcontrol.dll</HintPath>
+    </Reference>
     <Reference Include="NetDriver">
       <HintPath>../../ReMessenger\lib/NetDriver/NetDriver.dll</HintPath>
-    </Reference>
-    <Reference Include="AVcontrol">
-      <HintPath>..\..\ReMessenger\lib\AVcontrol\AVcontrol.dll</HintPath>
     </Reference>
     <Reference Include="JabrAPI">
       <HintPath>..\..\ReMessenger/lib/JabrAPI/Preview/21.07 New extended only new camouflage/JabrAPI.dll</HintPath>
