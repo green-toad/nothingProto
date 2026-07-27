@@ -1,7 +1,8 @@
 using JabrAPI;
 using static JabrAPI.OutputInterval.IntervalFilters.FilterType;
 using static JabrAPI.OutputInterval.IntervalFilters.FilterSelectionState;
-
+using System.Collections.Generic;
+using AVcontrol;
 
 
 namespace Shared
@@ -10,6 +11,8 @@ namespace Shared
     {
         private readonly RE5.BinaryKey _sendReKey    = new();
         private readonly RE5.BinaryKey _receiveReKey = new();
+
+        private List<byte[]> keyparts = new();
 
         public byte[] ExportSendKey()    => _sendReKey.ExportAsBinary();
         public byte[] ExportReceiveKey() => _receiveReKey.ExportAsBinary();
@@ -57,11 +60,20 @@ namespace Shared
         public void ImportEncryptedReceiveKey(byte[] keyExport)
             => _receiveReKey.ImportFromBinary(RE5.Decrypt.WithNoise.Binary([.. keyExport], _sendReKey));
         
-        public void ImportEncryptedReceiveKeyWithoutDecrypt(byte[] keyExport)
+        public void ImportReceiveKeyWithoutDecrypt(byte[] keyExport)
             => _receiveReKey.ImportFromBinary([.. keyExport]);
         
         public byte[] EncryptWithReciveKey(byte[] content)
             => [.. RE5.Encrypt.WithNoise.Binary([.. content], _receiveReKey)];
+
+        public int AddPartOfKey(byte[] keyFrame)
+        {
+            keyparts.Add(keyFrame);
+            return keyparts.Count;
+        }
+        
+        public void ApplyReceiveKeyWithParts()
+            => _receiveReKey.ImportFromBinary(Combine.ToArray(keyparts));
 
 
         public byte[] Encrypt(byte[] content)

@@ -109,11 +109,16 @@ namespace ClientSide
                     RSAkey.ImportRSAPublicKey(res.content, out _);
 
                     Console.Write("step 2\n");
-                    res = await _networker.Send(true, Frame.Pack(new Frame()
-                        { 
-                            type = Frame.Type.secondInitializationStep, 
-                            content = RSAkey.Encrypt(_eManager.ExportSendKey(), RSAEncryptionPadding.Pkcs1)
-                        }), 10 * 1000);
+                    List<byte[]> parts = Split.ArrayUniformSize(_eManager.ExportSendKey(), 5, true);
+                    foreach (var keyframe in parts)
+                    {
+                        Console.WriteLine(keyframe.Length);
+                        res = await _networker.Send(true, Frame.Pack(new Frame()
+                            { 
+                                type = Frame.Type.secondInitializationStep, 
+                                content = RSAkey.Encrypt(keyframe, RSAEncryptionPadding.Pkcs1)
+                            }), 10 * 1000);
+                    }
 
                     if (res == null) throw new ArgumentNullException(nameof(res), "Контент нетдрайвера погиб в бочке:(");
 

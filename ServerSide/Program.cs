@@ -37,7 +37,7 @@ namespace ServerSide
         {
             try
             {
-                using (var RSAkey = RSA.Create(8192))
+                using (var RSAkey = RSA.Create())
                 {
                     byte[] parse = RSAkey.ExportRSAPublicKey();
                     while (!cancellationToken.IsCancellationRequested)

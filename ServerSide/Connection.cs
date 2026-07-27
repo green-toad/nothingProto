@@ -49,8 +49,15 @@ namespace ServerSide
                     await _networker.Answer(_rsaExport, content.frameuid.Value);
                     break;
                 case Frame.Type.secondInitializationStep:
-                    _eManager.ImportEncryptedReceiveKeyWithoutDecrypt(_rsaKey.Decrypt(pack.content, RSAEncryptionPadding.Pkcs1));
-                    await _networker.Answer(_eManager.EncryptWithReciveKey(_eManager.ExportSendKey()), content.frameuid.Value);
+                    if (_eManager.AddPartOfKey(_rsaKey.Decrypt(pack.content, RSAEncryptionPadding.Pkcs1)) == 5)
+                    {
+                        _eManager.ApplyReceiveKeyWithParts();
+                        await _networker.Answer(_eManager.EncryptWithReciveKey(_eManager.ExportSendKey()), content.frameuid.Value);
+                    }
+                    else
+                    {
+                        await _networker.Answer(new byte[0], content.frameuid.Value);
+                    }
                     break;
                 case Frame.Type.content:
                     Console.WriteLine("эта херь - пакет!");
