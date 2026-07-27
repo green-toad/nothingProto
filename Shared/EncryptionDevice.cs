@@ -3,6 +3,12 @@ using static JabrAPI.OutputInterval.IntervalFilters.FilterType;
 using static JabrAPI.OutputInterval.IntervalFilters.FilterSelectionState;
 using System.Collections.Generic;
 using AVcontrol;
+using Org.BouncyCastle.Crypto;
+using Org.BouncyCastle.Crypto.Engines;
+using Org.BouncyCastle.Security;
+using Org.BouncyCastle.Pqc.Crypto.Ntru;
+using Org.BouncyCastle.X509;
+
 
 
 namespace Shared
@@ -80,5 +86,20 @@ namespace Shared
             => [.. RE5.Encrypt.WithNoise.Binary([.. content], _sendReKey)];
         public byte[] Decrypt(byte[] content)
             => [.. RE5.Decrypt.WithNoise.Binary([.. content], _receiveReKey)];
+    }
+
+    public class AsymetrycEncryptorDevice
+    {
+        public static readonly NtruKeyPairGenerator KeyGenerator = new();
+        private readonly AsymmetricCipherKeyPair _keys;
+        public AsymetrycEncryptorDevice(bool generate)
+        {
+            _keys = KeyGenerator.GenerateKeyPair();
+        }
+
+        public byte[] ExportPublicKey()
+            => SubjectPublicKeyInfoFactory.CreateSubjectPublicKeyInfo(_keys.Public).GetDerEncoded();
+
+        public void ImportPublicKey(byte[] key)
     }
 }
