@@ -1,13 +1,14 @@
-using System;
-using System.Buffers;
-using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Sockets;
-using System.Security.Cryptography;
 using System.Text;
+using System.Security.Cryptography;
+
+
+using Shared;
 using AVcontrol;
 using NetDriver.AE;
-using Shared;
+
+
 
 namespace ClientSide
 {
@@ -18,7 +19,7 @@ namespace ClientSide
         private readonly NetworkStream _stream; 
         private readonly Networker _networker;
         private readonly Socket _socket = new(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-        private readonly EncryptionDevice _eManager = new();
+        private readonly EncryptionDevice _eManager = new(false, false);
         public Task working;
 
         public Connection(TcpClient listener)
@@ -27,8 +28,12 @@ namespace ClientSide
             _socket.Connect(new IPEndPoint(IPAddress.Parse("127.0.0.1"), 22233));
             _networker = new(_socket, Reading);
             _client = listener;
-            
+
             _stream = _client.GetStream();
+
+            working = Task.CompletedTask;
+            //  Коллега, Clarify please: working is not assigned
+            //  мне пришлось сделать это за тебя, и я без понятия сломало ли это что-то или починило
         }
 
         public async Task<bool> Configurate()
@@ -102,6 +107,7 @@ namespace ClientSide
 
 
                 _eManager.ApplyCustomSettings();
+                _eManager.UpdateSendKey();
 
                 using (var RSAkey = RSA.Create())
                 {

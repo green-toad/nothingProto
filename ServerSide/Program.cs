@@ -1,15 +1,14 @@
-﻿using NetDriver.AE;
-using System.Collections.Concurrent;
-using System.Net;
+﻿using System.Net;
 using System.Net.Sockets;
-using System.Text;
 using System.Security.Cryptography;
+using System.Collections.Concurrent;
+
 
 namespace ServerSide
 {
     public class Program
     {
-        public static async Task Main(string[] arg)
+        public static async Task Main()
         {
             Console.WriteLine("Start . . .");
             var listener = new TcpListener(IPAddress.Any, 22233);
@@ -37,25 +36,23 @@ namespace ServerSide
         {
             try
             {
-                using (var RSAkey = RSA.Create())
+                using var RSAkey = RSA.Create();
+                byte[] parse = RSAkey.ExportRSAPublicKey();
+                while (!cancellationToken.IsCancellationRequested)
                 {
-                    byte[] parse = RSAkey.ExportRSAPublicKey();
-                    while (!cancellationToken.IsCancellationRequested)
+                    try
                     {
-                        try
-                        {
-                            var client = await listener.AcceptTcpClientAsync(cancellationToken);
-                            var connection = new Connection(client.Client, RSAkey, parse);
-                            workers.TryAdd(connection, connection.working);
-                        }
-                        catch (OperationCanceledException)
-                        {
-                            break;
-                        }
-                        catch (Exception ex)
-                        {
-                            Console.WriteLine($"[Ошибка при приёме соединения] {ex.Message}");
-                        }
+                        var client = await listener.AcceptTcpClientAsync(cancellationToken);
+                        var connection = new Connection(client.Client, RSAkey, parse);
+                        workers.TryAdd(connection, connection.working);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        break;
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"[Ошибка при приёме соединения] {ex.Message}");
                     }
                 }
             }

@@ -1,11 +1,11 @@
-using NetDriver.AE;
-using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Sockets;
-using System.Text;
 using System.Security.Cryptography;
-using AVcontrol;
+
 using Shared;
+using AVcontrol;
+using NetDriver.AE;
+
 
 
 namespace ServerSide
@@ -13,9 +13,9 @@ namespace ServerSide
      public class Connection : IAsyncDisposable
     {
         private readonly Networker _networker;
-        private NetworkStream _stream;
+        private NetworkStream? _stream;
         private readonly TcpClient _client;
-        private readonly EncryptionDevice _eManager = new();
+        private readonly EncryptionDevice _eManager = new(false, false);
         private readonly CancellationTokenSource _cts = new();
         private readonly RSA _rsaKey;
         private readonly byte[] _rsaExport;
@@ -26,8 +26,12 @@ namespace ServerSide
             _networker = new(con, Reciver);
             _client = new TcpClient();
             working = Task.Run(Sending);
+
             _rsaExport = export;
             _rsaKey = rsa;
+
+            _eManager.ApplyCustomSettings();
+            _eManager.UpdateSendKey();
         }
 
         private async Task Reciver(ResultContent content)
@@ -56,12 +60,13 @@ namespace ServerSide
                     }
                     else
                     {
-                        await _networker.Answer(new byte[0], content.frameuid.Value);
+                        await _networker.Answer([], content.frameuid.Value);
                     }
                     break;
                 case Frame.Type.content:
                     Console.WriteLine("эта херь - пакет!");
-                    await _stream.WriteAsync(_eManager.Decrypt(pack.content), _cts.Token);
+                    if (_stream != null) await _stream.WriteAsync(
+                        _eManager.Decrypt(pack.content), _cts.Token);
                     break;
             }
         }
@@ -79,7 +84,7 @@ namespace ServerSide
                         continue;
                     }
 
-                    int bytesRead = await _stream.ReadAsync(readBuffer, 0, readBuffer.Length, _cts.Token);
+                    int bytesRead = await _stream.ReadAsync(readBuffer, _cts.Token);
                     if (bytesRead == 0) break;
 
                     byte[] chunk = new byte[bytesRead];

@@ -1,24 +1,25 @@
+using System;
+using System.Collections.Generic;
+
 using JabrAPI;
+using AVcontrol;
 using static JabrAPI.OutputInterval.IntervalFilters.FilterType;
 using static JabrAPI.OutputInterval.IntervalFilters.FilterSelectionState;
-using System.Collections.Generic;
-using AVcontrol;
-using Org.BouncyCastle.Crypto;
-using Org.BouncyCastle.Crypto.Engines;
-using Org.BouncyCastle.Security;
-using Org.BouncyCastle.Pqc.Crypto.Ntru;
+
 using Org.BouncyCastle.X509;
+using Org.BouncyCastle.Crypto;
+using Org.BouncyCastle.Pqc.Crypto.Ntru;
 
 
 
 namespace Shared
 {
-    public class EncryptionDevice
+    public class EncryptionDevice(bool autoGenerateSendKey = true, bool autoGenerateReceiveKey = false)
     {
-        private readonly RE5.BinaryKey _sendReKey    = new();
-        private readonly RE5.BinaryKey _receiveReKey = new();
+        private readonly RE5.BinaryKey _sendReKey    = new(autoGenerateSendKey);
+        private readonly RE5.BinaryKey _receiveReKey = new(autoGenerateReceiveKey);
 
-        private List<byte[]> keyparts = new();
+        private readonly List<Byte[]> keyparts = [];
 
         public byte[] ExportSendKey()    => _sendReKey.ExportAsBinary();
         public byte[] ExportReceiveKey() => _receiveReKey.ExportAsBinary();
@@ -28,6 +29,8 @@ namespace Shared
         public void ApplyCustomSettings()
         {
             _sendReKey.Set.Default();
+            _sendReKey.Set.ShiftCount(3);
+
             _sendReKey.Noisifier.settings = new()
             {
                 DynamicOutputIntervals =
@@ -100,6 +103,6 @@ namespace Shared
         public byte[] ExportPublicKey()
             => SubjectPublicKeyInfoFactory.CreateSubjectPublicKeyInfo(_keys.Public).GetDerEncoded();
 
-        public void ImportPublicKey(byte[] key)
+        public void ImportPublicKey(byte[] key) { }
     }
 }
