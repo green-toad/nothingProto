@@ -12,7 +12,7 @@
       <HintPath>..\lib\AVcontrol\Preview\AVcontrol.dll</HintPath>
     </Reference>
     <Reference Include="JabrAPI">
-      <HintPath>..\lib\JabrAPI\Preview\26.07 Fixed ShCount\JabrAPI.dll</HintPath>
+      <HintPath>..\lib\JabrAPI\v5.0.1\JabrAPI.dll</HintPath>
     </Reference>
     <Reference Include="NetDriver">
       <HintPath>../lib/NetDriver/NetDriver.dll</HintPath>
