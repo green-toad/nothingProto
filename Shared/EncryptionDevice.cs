@@ -63,14 +63,14 @@ namespace Shared
         public void UpdateSendKey() => _sendReKey.Next();
 
 
-        public void ImportEncryptedReceiveKey(byte[] keyExport)
+        public bool ImportEncryptedReceiveKey(byte[] keyExport)
             => _receiveReKey.ImportFromBinary(RE5.Decrypt.WithNoise.Binary([.. keyExport], _sendReKey));
         
-        public void ImportReceiveKeyWithoutDecrypt(byte[] keyExport)
+        public bool ImportReceiveKeyWithoutDecrypt(byte[] keyExport)
             => _receiveReKey.ImportFromBinary([.. keyExport]);
         
-        public byte[] EncryptWithReciveKey(byte[] content)
-            => [.. RE5.Encrypt.WithNoise.Binary([.. content], _receiveReKey)];
+        public byte[] EncryptWithReciveKey(byte[] content, out Exception? exception)
+            => [.. RE5.Encrypt.WithNoise.Binary([.. content], _receiveReKey, out exception)];
 
         public int AddPartOfKey(byte[] keyFrame)
         {
@@ -78,7 +78,7 @@ namespace Shared
             return keyparts.Count;
         }
         
-        public void ApplyReceiveKeyWithParts()
+        public bool ApplyReceiveKeyWithParts()
             => _receiveReKey.ImportFromBinary(Combine.ToArray(keyparts));
 
 

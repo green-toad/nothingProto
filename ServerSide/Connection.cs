@@ -53,27 +53,49 @@ namespace ServerSide
                     await _networker.Answer(_ntruEncrypter.ExportPublicKey(), content.frameuid.Value);
                     break;
                 case Frame.Type.secondInitializationStep:
-                    if (_eManager.AddPartOfKey(_ntruEncrypter.TryDecrypt(pack.content)) == 5)
+                    var decryptResult = _ntruEncrypter.TryDecrypt(pack.content);
+                    StringBuilder sb = new();
+                    Console.Write("\n\tAfter decrypt NTRUE part: ");
+                    if (decryptResult != null)
                     {
-                        _eManager.ApplyReceiveKeyWithParts();
+                        foreach (Byte aboba in decryptResult) sb.Append(aboba);
+                        Console.Write(sb.ToString() + "\n\n");
+                    }
+                    else Console.Write("NULL\n");
 
-                        Console.Write("вывод сенда перед отправкой:\n");
+                    if (_eManager.AddPartOfKey(decryptResult) == 5)
+                    {
+                        Console.Write("\n\t\tзашел в ветку конца второго шага\n");
 
-                        var gotThisBS__ = _eManager.ExportSendKey();
-                        StringBuilder sb__ = new();
-                        Console.Write("\n\tReceived reKey after handshake:\n ");
-                        foreach (Byte aboba in gotThisBS__) sb__.Append(aboba);
-                        Console.Write(sb__.ToString() + "\n\n    ");
+                        bool success = _eManager.ApplyReceiveKeyWithParts();
+                        Console.Write("\n\tReKey import result: " + success);
 
-                        await _networker.Answer(_eManager.EncryptWithReciveKey(_eManager.ExportSendKey()), content.frameuid.Value);
+                        var gotReceiveKey = _eManager.ExportReceiveKey();
+                        sb.Clear();
+                        Console.Write("\n\tReceived reKey after handshake: ");
+                        foreach (Byte aboba in gotReceiveKey) sb.Append(aboba);
+                        Console.Write(sb.ToString());
 
-                        Console.Write("зашел в ветку конца второго шага\n");
 
-                        var gotThisBS = _eManager.ExportReceiveKey();
-                        StringBuilder sb = new();
-                        Console.Write("\n\tReceived reKey after handshake:\n ");
-                        foreach (Byte aboba in gotThisBS) sb.Append(aboba);
-                        Console.Write(sb.ToString() + "\n\n    ");
+                        sb.Clear();
+                        var sendKeyExport = _eManager.ExportSendKey();
+                        foreach (Byte aboba in sendKeyExport) sb.Append(aboba);
+                        Console.Write("\n\tServer send key: " + sb.ToString() + "\n");
+
+
+                        var encryptedSendKey = _eManager.EncryptWithReciveKey(sendKeyExport, out Exception? exception);
+                        if (exception != null)
+                        {
+                            Console.Write("\n\n\tCaught exception: " + exception.ToString());
+                        }
+                        else
+                        {
+                            sb.Clear();
+                            Console.Write("\n\tEncrypted send key: ");
+                            foreach (Byte aboba in encryptedSendKey) sb.Append(aboba);
+                            Console.Write(sb.ToString() + "\n\n");
+                        }
+                        await _networker.Answer(encryptedSendKey, content.frameuid.Value);
                     }
                     else
                     {
