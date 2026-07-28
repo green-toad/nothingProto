@@ -5,6 +5,7 @@ using System.Security.Cryptography;
 using Shared;
 using AVcontrol;
 using NetDriver.AE;
+using System.Text;
 
 
 
@@ -55,11 +56,29 @@ namespace ServerSide
                     if (_eManager.AddPartOfKey(_ntruEncrypter.TryDecrypt(pack.content)) == 5)
                     {
                         _eManager.ApplyReceiveKeyWithParts();
+
+                        Console.Write("вывод сенда перед отправкой:\n");
+
+                        var gotThisBS__ = _eManager.ExportSendKey();
+                        StringBuilder sb__ = new();
+                        Console.Write("\n\tReceived reKey after handshake:\n ");
+                        foreach (Byte aboba in gotThisBS__) sb__.Append(aboba);
+                        Console.Write(sb__.ToString() + "\n\n    ");
+
                         await _networker.Answer(_eManager.EncryptWithReciveKey(_eManager.ExportSendKey()), content.frameuid.Value);
+
+                        Console.Write("зашел в ветку конца второго шага\n");
+
+                        var gotThisBS = _eManager.ExportReceiveKey();
+                        StringBuilder sb = new();
+                        Console.Write("\n\tReceived reKey after handshake:\n ");
+                        foreach (Byte aboba in gotThisBS) sb.Append(aboba);
+                        Console.Write(sb.ToString() + "\n\n    ");
                     }
                     else
                     {
-                        await _networker.Answer([], content.frameuid.Value);
+                        Console.Write("зашел в ветку середну второго шага\n");
+                        await _networker.Answer([ 0 ], content.frameuid.Value);
                     }
                     break;
                 case Frame.Type.content:

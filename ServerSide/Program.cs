@@ -18,7 +18,6 @@ namespace ServerSide
             var cts = new CancellationTokenSource();
 
             var cleanTask = CleanupLoop(workers, cts.Token);
-            Console.WriteLine("Create fucking rsa key. . .");
             var acceptTask = AcceptLoopAsync(listener, workers, cts.Token);
 
             Console.WriteLine("Сервер запущен. Нажмите любую клавишу для остановки...");

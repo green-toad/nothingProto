@@ -11,7 +11,7 @@ namespace ClientSide
     {
         public static async Task Main()
         {
-            var listener = new TcpListener(IPAddress.Parse("127.0.0.1"), 8888);
+            var listener = new TcpListener(IPAddress.Parse("127.0.0.1"), 8088);
             listener.Start();
 
             var workers = new ConcurrentDictionary<Connection, Task>();

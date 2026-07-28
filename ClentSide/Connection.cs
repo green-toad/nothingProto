@@ -129,11 +129,24 @@ namespace ClientSide
                             type = Frame.Type.secondInitializationStep, 
                             content = ntru.TryEncrypt(keyframe)
                         }), 10 * 1000);
+                    var gotThisBS___ = res.content;
+                    StringBuilder sb___ = new();
+                    Console.Write("\n\tReceived reKey after handshake:\n ");
+                    foreach (Byte aboba in gotThisBS___) sb___.Append(aboba);
+                    Console.Write(sb___.ToString() + "\n\n    ");
                 }
 
                 if (res == null) throw new ArgumentNullException(nameof(res), "Контент нетдрайвера погиб в бочке:(");
 
                 Console.Write("step 3\n");
+
+                var gotThisBS__ = res.content;
+                StringBuilder sb__ = new();
+                Console.Write("\n\tReceived reKey after handshake:\n ");
+                foreach (Byte aboba in gotThisBS__) sb__.Append(aboba);
+                Console.Write(sb__.ToString() + "\n\n    ");
+
+
                 _eManager.ImportEncryptedReceiveKey(res.content);
 
                 var gotThisBS = _eManager.ExportReceiveKey();
