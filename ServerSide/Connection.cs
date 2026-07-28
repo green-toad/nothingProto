@@ -29,7 +29,8 @@ namespace ServerSide
             _eManager.ApplyCustomSettings();
             _eManager.UpdateSendKey();
 
-            _ntruEncrypter = new NtruEncryptor();
+            //_ntruEncrypter = new NtruEncryptor();
+            _ntruEncrypter = new RsaAsymetricEncryptor();
         }
 
         private async Task Reciver(ResultContent content)
@@ -116,6 +117,7 @@ namespace ServerSide
             }
             _cts.Dispose();
             _client.Dispose();
+            await _ntruEncrypter.DisposeAsync();
         }
     }
 }

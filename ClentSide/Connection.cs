@@ -7,6 +7,7 @@ using System.Security.Cryptography;
 using Shared;
 using AVcontrol;
 using NetDriver.AE;
+using System.Runtime.CompilerServices;
 
 
 
@@ -111,7 +112,8 @@ namespace ClientSide
 
                 Console.Write(res + "\n" + res.content + "\n" + res.type + "\n");
 
-                IAsymetricEncryptor ntru = new NtruEncryptor();
+                //IAsymetricEncryptor ntru = new NtruEncryptor();
+                await using var ntru = new RsaAsymetricEncryptor();
                 ntru.ImportPublicKey(res.content);
 
                 Console.Write("step 2\n");
