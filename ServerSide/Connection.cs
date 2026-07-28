@@ -17,26 +17,24 @@ namespace ServerSide
         private readonly TcpClient _client;
         private readonly EncryptionDevice _eManager = new(false, false);
         private readonly CancellationTokenSource _cts = new();
-        private readonly RSA _rsaKey;
-        private readonly byte[] _rsaExport;
+        private readonly IAsymetricEncryptor _ntruEncrypter;
         public readonly Task working;
 
-        public Connection(Socket con, RSA rsa, byte[] export)
+        public Connection(Socket con)
         {
             _networker = new(con, Reciver);
             _client = new TcpClient();
             working = Task.Run(Sending);
 
-            _rsaExport = export;
-            _rsaKey = rsa;
-
             _eManager.ApplyCustomSettings();
             _eManager.UpdateSendKey();
+
+            _ntruEncrypter = new NtruEncryptor();
         }
 
         private async Task Reciver(ResultContent content)
         {
-            Console.WriteLine("че то поймал!");
+            Console.Write("че то поймал!\n");
 
             var pack = Frame.Unpack(content.content);
             switch(pack.type)
@@ -50,10 +48,10 @@ namespace ServerSide
                     _stream = _client.GetStream();
                     Console.WriteLine("ответил, что все норм!");
 
-                    await _networker.Answer(_rsaExport, content.frameuid.Value);
+                    await _networker.Answer(_ntruEncrypter.ExportPublicKey(), content.frameuid.Value);
                     break;
                 case Frame.Type.secondInitializationStep:
-                    if (_eManager.AddPartOfKey(_rsaKey.Decrypt(pack.content, RSAEncryptionPadding.Pkcs1)) == 5)
+                    if (_eManager.AddPartOfKey(_ntruEncrypter.TryDecrypt(pack.content)) == 5)
                     {
                         _eManager.ApplyReceiveKeyWithParts();
                         await _networker.Answer(_eManager.EncryptWithReciveKey(_eManager.ExportSendKey()), content.frameuid.Value);

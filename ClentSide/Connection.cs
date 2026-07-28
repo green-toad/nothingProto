@@ -109,28 +109,30 @@ namespace ClientSide
                 _eManager.ApplyCustomSettings();
                 _eManager.UpdateSendKey();
 
-                using (var RSAkey = RSA.Create())
+                Console.Write(res + "\n" + res.content + "\n" + res.type + "\n");
+
+                IAsymetricEncryptor ntru = new NtruEncryptor();
+                ntru.ImportPublicKey(res.content);
+
+                Console.Write("step 2\n");
+                List<byte[]> parts = Split.ArrayUniformSize(_eManager.ExportSendKey(), 5, true);
+                
+
+                foreach (var keyframe in parts)
                 {
-                    Console.Write(res + "\n" + res.content + "\n" + res.type + "\n");
-                    RSAkey.ImportRSAPublicKey(res.content, out _);
-
-                    Console.Write("step 2\n");
-                    List<byte[]> parts = Split.ArrayUniformSize(_eManager.ExportSendKey(), 5, true);
-                    foreach (var keyframe in parts)
-                    {
-                        Console.WriteLine(keyframe.Length);
-                        res = await _networker.Send(true, Frame.Pack(new Frame()
-                            { 
-                                type = Frame.Type.secondInitializationStep, 
-                                content = RSAkey.Encrypt(keyframe, RSAEncryptionPadding.Pkcs1)
-                            }), 10 * 1000);
-                    }
-
-                    if (res == null) throw new ArgumentNullException(nameof(res), "Контент нетдрайвера погиб в бочке:(");
-
-                    Console.Write("step 3\n");
-                    _eManager.ImportEncryptedReceiveKey(res.content);
+                    Console.Write(keyframe.Length);
+                    Console.Write("\n");
+                    res = await _networker.Send(true, Frame.Pack(new Frame()
+                        { 
+                            type = Frame.Type.secondInitializationStep, 
+                            content = ntru.TryEncrypt(keyframe)
+                        }), 10 * 1000);
                 }
+
+                if (res == null) throw new ArgumentNullException(nameof(res), "Контент нетдрайвера погиб в бочке:(");
+
+                Console.Write("step 3\n");
+                _eManager.ImportEncryptedReceiveKey(res.content);
 
                 var gotThisBS = _eManager.ExportReceiveKey();
                 StringBuilder sb = new();

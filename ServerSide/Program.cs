@@ -36,14 +36,12 @@ namespace ServerSide
         {
             try
             {
-                using var RSAkey = RSA.Create();
-                byte[] parse = RSAkey.ExportRSAPublicKey();
                 while (!cancellationToken.IsCancellationRequested)
                 {
                     try
                     {
                         var client = await listener.AcceptTcpClientAsync(cancellationToken);
-                        var connection = new Connection(client.Client, RSAkey, parse);
+                        var connection = new Connection(client.Client);
                         workers.TryAdd(connection, connection.working);
                     }
                     catch (OperationCanceledException)
