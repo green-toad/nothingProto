@@ -48,59 +48,23 @@ namespace ServerSide
 
                     await _client.ConnectAsync(IPAddress.Parse(addr[0]), int.Parse(addr[1]), _cts.Token);
                     _stream = _client.GetStream();
-                    Console.WriteLine("ответил, что все норм!");
 
                     await _networker.Answer(_ntruEncrypter.ExportPublicKey(), content.frameuid.Value);
                     break;
                 case Frame.Type.secondInitializationStep:
+                    Console.WriteLine("это второй этап подключения!");
                     var decryptResult = _ntruEncrypter.TryDecrypt(pack.content);
-                    StringBuilder sb = new();
-                    Console.Write("\n\tAfter decrypt NTRUE part: ");
-                    if (decryptResult != null)
-                    {
-                        foreach (Byte aboba in decryptResult) sb.Append(aboba);
-                        Console.Write(sb.ToString() + "\n\n");
-                    }
-                    else Console.Write("NULL\n");
 
                     if (_eManager.AddPartOfKey(decryptResult) == 5)
                     {
-                        Console.Write("\n\t\tзашел в ветку конца второго шага\n");
+                        _eManager.ApplyReceiveKeyWithParts();
+                        var encryptedSendKey = _eManager.EncryptWithReciveKey(_eManager.ExportSendKey());
 
-                        bool success = _eManager.ApplyReceiveKeyWithParts();
-                        Console.Write("\n\tReKey import result: " + success);
-
-                        var gotReceiveKey = _eManager.ExportReceiveKey();
-                        sb.Clear();
-                        Console.Write("\n\tReceived reKey after handshake: ");
-                        foreach (Byte aboba in gotReceiveKey) sb.Append(aboba);
-                        Console.Write(sb.ToString());
-
-
-                        sb.Clear();
-                        var sendKeyExport = _eManager.ExportSendKey();
-                        foreach (Byte aboba in sendKeyExport) sb.Append(aboba);
-                        Console.Write("\n\tServer send key: " + sb.ToString() + "\n");
-
-
-                        var encryptedSendKey = _eManager.EncryptWithReciveKey(sendKeyExport, out Exception? exception);
-                        if (exception != null)
-                        {
-                            Console.Write("\n\n\tCaught exception: " + exception.ToString());
-                        }
-                        else
-                        {
-                            sb.Clear();
-                            Console.Write("\n\tEncrypted send key: ");
-                            foreach (Byte aboba in encryptedSendKey) sb.Append(aboba);
-                            Console.Write(sb.ToString() + "\n\n");
-                        }
                         await _networker.Answer(encryptedSendKey, content.frameuid.Value);
                     }
                     else
                     {
-                        Console.Write("зашел в ветку середну второго шага\n");
-                        await _networker.Answer([ 0 ], content.frameuid.Value);
+                        await _networker.Answer([], content.frameuid.Value);
                     }
                     break;
                 case Frame.Type.content:

@@ -69,8 +69,8 @@ namespace Shared
         public bool ImportReceiveKeyWithoutDecrypt(byte[] keyExport)
             => _receiveReKey.ImportFromBinary([.. keyExport]);
         
-        public byte[] EncryptWithReciveKey(byte[] content, out Exception? exception)
-            => [.. RE5.Encrypt.WithNoise.Binary([.. content], _receiveReKey, out exception)];
+        public byte[] EncryptWithReciveKey(byte[] content)
+            => [.. RE5.Encrypt.WithNoise.Binary([.. content], _receiveReKey)];
 
         public int AddPartOfKey(byte[] keyFrame)
         {

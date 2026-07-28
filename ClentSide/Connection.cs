@@ -115,16 +115,9 @@ namespace ClientSide
                 await using var ntru = new RsaAsymetricEncryptor();
                 ntru.ImportPublicKey(res.content);
 
-                var myKeyExport = _eManager.ExportSendKey();
-                StringBuilder sb = new();
-                Console.Write("\n\tMy key that im going to send: ");
-                foreach (Byte aboba in myKeyExport) sb.Append(aboba);
-                Console.Write(sb.ToString() + "\n\n    ");
-
-
 
                 Console.Write("step 2\n");
-                List<byte[]> parts = Split.ArrayUniformSize(myKeyExport, 5, true);
+                List<byte[]> parts = Split.ArrayUniformSize(_eManager.ExportSendKey(), 5, true);
                 
 
                 foreach (var keyframe in parts)
@@ -135,28 +128,13 @@ namespace ClientSide
                             type = Frame.Type.secondInitializationStep, 
                             content = ntru.TryEncrypt(keyframe)
                         }), 10 * 1000);
-
-
-                    var gotThisBS___ = res.content;
-                    sb.Clear();
-                    Console.Write("\n\tReceived reKey after handshake: ");
-                    foreach (Byte aboba in gotThisBS___) sb.Append(aboba);
-                    Console.Write(sb.ToString() + "\n\n    ");
                 }
 
                 if (res == null) throw new ArgumentNullException(nameof(res), "Контент нетдрайвера погиб в бочке:(");
 
                 Console.Write("step 3\n");
 
-                var receivedData = res.content;
-                sb.Clear();
-                Console.Write("\n\tReceived reKey after handshake: ");
-                foreach (Byte aboba in receivedData) sb.Append(aboba);
-                Console.Write(sb.ToString() + "\n\n    ");
-
-
-                bool importRes = _eManager.ImportEncryptedReceiveKey(receivedData);
-                Console.Write("\n\tKey import status: " + importRes + "\n\n");
+                bool importRes = _eManager.ImportEncryptedReceiveKey(res.content);
 
 
                 byte[] reply =
