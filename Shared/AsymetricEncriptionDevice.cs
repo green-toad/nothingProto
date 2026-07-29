@@ -1,12 +1,11 @@
 using System;
-using System.Text;
-using Org.BouncyCastle.Crypto;
-using Org.BouncyCastle.Crypto.Engines;
-using Org.BouncyCastle.Pqc.Crypto.Ntru;
-using Org.BouncyCastle.Security;
 using System.Security.Cryptography;
 using System.Threading.Tasks;
-
+using System.IO;
+using Org.BouncyCastle.Crypto.Generators;
+using Org.BouncyCastle.Crypto.Parameters;
+using Org.BouncyCastle.Crypto.Agreement;
+using Org.BouncyCastle.Security;
 
 namespace Shared
 {
@@ -21,31 +20,156 @@ namespace Shared
         byte[]? TryDecrypt(byte[] content);
     }
 
-    public class NtruEncryptor : IAsymetricEncryptor
+    public class X25519Encryptor : IAsymetricEncryptor
     {
-        public ValueTask DisposeAsync()
+        private const int KeySize = 32;
+        private const int NonceSize = 12;
+        private const int TagSize = 16;
+
+        private readonly SecureRandom _random = new SecureRandom();
+        private X25519PrivateKeyParameters? _staticPrivateKey;
+        private X25519PublicKeyParameters? _staticPublicKey;
+
+        private X25519PublicKeyParameters? _peerPublicKey;
+
+        public X25519Encryptor()
         {
-            throw new NotImplementedException();
+            var generator = new X25519KeyPairGenerator();
+            generator.Init(new X25519KeyGenerationParameters(_random));
+
+            var keyPair = generator.GenerateKeyPair();
+            _staticPrivateKey = (X25519PrivateKeyParameters)keyPair.Private;
+            _staticPublicKey = (X25519PublicKeyParameters)keyPair.Public;
         }
 
         public byte[] ExportPublicKey()
         {
-            throw new NotImplementedException();
+            return _staticPublicKey!.GetEncoded();
         }
 
         public bool ImportPublicKey(byte[] key)
         {
-            throw new NotImplementedException();
-        }
+            if (key == null || key.Length != KeySize)
+                return false;
 
-        public byte[]? TryDecrypt(byte[] content)
-        {
-            throw new NotImplementedException();
+            try
+            {
+                _peerPublicKey = new X25519PublicKeyParameters(key, 0);
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
         }
 
         public byte[]? TryEncrypt(byte[] content)
         {
-            throw new NotImplementedException();
+            if (_peerPublicKey == null || content == null)
+                return null;
+
+            try
+            {
+                var ephemeralGenerator = new X25519KeyPairGenerator();
+                ephemeralGenerator.Init(new X25519KeyGenerationParameters(_random));
+                var ephemeralKeyPair = ephemeralGenerator.GenerateKeyPair();
+
+                var ephemeralPrivate = (X25519PrivateKeyParameters)ephemeralKeyPair.Private;
+                var ephemeralPublic = (X25519PublicKeyParameters)ephemeralKeyPair.Public;
+
+                var agreement = new X25519Agreement();
+                agreement.Init(ephemeralPrivate);
+                byte[] sharedSecret = new byte[agreement.AgreementSize];
+                agreement.CalculateAgreement(_peerPublicKey, sharedSecret, 0);
+
+                byte[] ephemeralPublicEncoded = ephemeralPublic.GetEncoded();
+
+                byte[] aesKey = DeriveKey(sharedSecret, ephemeralPublicEncoded, _staticPublicKey!.GetEncoded());
+
+                byte[] nonce = new byte[NonceSize];
+                RandomNumberGenerator.Fill(nonce);
+
+                byte[] cipherText = new byte[content.Length];
+                byte[] tag = new byte[TagSize];
+
+                using (var aesGcm = new AesGcm(aesKey, TagSize))
+                {
+                    aesGcm.Encrypt(nonce, content, cipherText, tag);
+                }
+                using var ms = new MemoryStream();
+                ms.Write(ephemeralPublicEncoded, 0, ephemeralPublicEncoded.Length);
+                ms.Write(nonce, 0, nonce.Length);
+                ms.Write(tag, 0, tag.Length);
+                ms.Write(cipherText, 0, cipherText.Length);
+                return ms.ToArray();
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        public byte[]? TryDecrypt(byte[] content)
+        {
+            if (_staticPrivateKey == null || content == null)
+                return null;
+
+            const int headerSize = KeySize + NonceSize + TagSize;
+            if (content.Length < headerSize)
+                return null;
+
+            try
+            {
+                byte[] ephemeralPublicEncoded = new byte[KeySize];
+                byte[] nonce = new byte[NonceSize];
+                byte[] tag = new byte[TagSize];
+
+                Array.Copy(content, 0, ephemeralPublicEncoded, 0, KeySize);
+                Array.Copy(content, KeySize, nonce, 0, NonceSize);
+                Array.Copy(content, KeySize + NonceSize, tag, 0, TagSize);
+
+                int cipherTextLength = content.Length - headerSize;
+                byte[] cipherText = new byte[cipherTextLength];
+                Array.Copy(content, headerSize, cipherText, 0, cipherTextLength);
+
+                var ephemeralPublic = new X25519PublicKeyParameters(ephemeralPublicEncoded, 0);
+
+                var agreement = new X25519Agreement();
+                agreement.Init(_staticPrivateKey);
+                byte[] sharedSecret = new byte[agreement.AgreementSize];
+                agreement.CalculateAgreement(ephemeralPublic, sharedSecret, 0);
+
+                byte[] aesKey = DeriveKey(sharedSecret, ephemeralPublicEncoded, _staticPublicKey!.GetEncoded());
+
+                byte[] plainText = new byte[cipherTextLength];
+                using (var aesGcm = new AesGcm(aesKey, TagSize))
+                {
+                    aesGcm.Decrypt(nonce, cipherText, tag, plainText);
+                }
+
+                return plainText;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        private static byte[] DeriveKey(byte[] sharedSecret, byte[] ephemeralPub, byte[] staticPub)
+        {
+            byte[] info = new byte[ephemeralPub.Length + staticPub.Length];
+            Buffer.BlockCopy(ephemeralPub, 0, info, 0, ephemeralPub.Length);
+            Buffer.BlockCopy(staticPub, 0, info, ephemeralPub.Length, staticPub.Length);
+
+            return HKDF.DeriveKey(HashAlgorithmName.SHA256, sharedSecret, outputLength: 32, salt: null, info: info);
+        }
+
+        public ValueTask DisposeAsync()
+        {
+            _staticPrivateKey = null;
+            _staticPublicKey = null;
+            _peerPublicKey = null;
+            return ValueTask.CompletedTask;
         }
     }
 

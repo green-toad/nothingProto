@@ -95,13 +95,14 @@ namespace ClientSide
                 byte[] portBytes = new byte[2];
                 await ReadFullAsync(_stream, portBytes, 0, 2);
                 targetPort = (portBytes[0] << 8) | portBytes[1];
-                
+
+                IAsymetricEncryptor asymEncryptor = new X25519Encryptor();
 
                 Console.Write("step 1\n");
                 var res = await _networker.Send(true, Frame.Pack(new Frame()
                     { 
                         type = Frame.Type.firstInitalizeStep, 
-                        content = ToBinary.ASCII($"{targetHost}~:~{targetPort}")
+                        content = ToBinary.ASCII($"{targetHost}~:~{targetPort}~:~{Convert.ToBase64String(asymEncryptor.ExportPublicKey())}")
                     }), 10 * 1000);
                 
                 if (res == null) throw new ArgumentNullException(nameof(res), "Контент нетдрайвера выпал за борт :(");
@@ -111,24 +112,24 @@ namespace ClientSide
                 _eManager.UpdateSendKey();
 
 
-                //IAsymetricEncryptor ntru = new NtruEncryptor();
-                await using var ntru = new RsaAsymetricEncryptor();
-                ntru.ImportPublicKey(res.content);
+                
+                // await using var ntru = new RsaAsymetricEncryptor();
+                asymEncryptor.ImportPublicKey(res.content);
 
 
                 Console.Write("step 2\n");
-                List<byte[]> parts = Split.ArrayUniformSize(_eManager.ExportSendKey(), 5, true);
+                // List<byte[]> parts = Split.ArrayUniformSize(_eManager.ExportSendKey(), 5, true);
                 
 
-                foreach (var keyframe in parts)
-                {
-                    Console.Write(keyframe.Length + "\n");
-                    res = await _networker.Send(true, Frame.Pack(new Frame()
-                        { 
-                            type = Frame.Type.secondInitializationStep, 
-                            content = ntru.TryEncrypt(keyframe)
-                        }), 10 * 1000);
-                }
+                // foreach (var keyframe in parts)
+                // {
+                //     Console.Write(keyframe.Length + "\n");
+                res = await _networker.Send(true, Frame.Pack(new Frame()
+                    { 
+                        type = Frame.Type.secondInitializationStep, 
+                        content = asymEncryptor.TryEncrypt(_eManager.ExportSendKey())
+                    }), 10 * 1000);
+                // }
 
                 if (res == null) throw new ArgumentNullException(nameof(res), "Контент нетдрайвера погиб в бочке:(");
 

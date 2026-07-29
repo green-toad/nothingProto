@@ -18,7 +18,7 @@ namespace ServerSide
         private readonly TcpClient _client;
         private readonly EncryptionDevice _eManager = new(false, false);
         private readonly CancellationTokenSource _cts = new();
-        private readonly IAsymetricEncryptor _ntruEncrypter;
+        private readonly IAsymetricEncryptor _asymEncrypter;
         public readonly Task working;
 
         public Connection(Socket con)
@@ -30,8 +30,8 @@ namespace ServerSide
             _eManager.ApplyCustomSettings();
             _eManager.UpdateSendKey();
 
-            //_ntruEncrypter = new NtruEncryptor();
-            _ntruEncrypter = new RsaAsymetricEncryptor();
+            _asymEncrypter = new X25519Encryptor();
+            // _ntruEncrypter = new RsaAsymetricEncryptor();
         }
 
         private async Task Reciver(ResultContent content)
@@ -45,27 +45,23 @@ namespace ServerSide
                     Console.WriteLine("это херь на подключение!");
                     var addr = FromBinary.ASCII(pack.content).Split("~:~");
                     Console.WriteLine($"{addr[0]} : {addr[1]}");
+                    foreach(var log in addr) {Console.Write($"\t\t{log};\n");}
+                    _asymEncrypter.ImportPublicKey(Convert.FromBase64String(addr[2]));
+
+                    
 
                     await _client.ConnectAsync(IPAddress.Parse(addr[0]), int.Parse(addr[1]), _cts.Token);
                     _stream = _client.GetStream();
 
-                    await _networker.Answer(_ntruEncrypter.ExportPublicKey(), content.frameuid.Value);
+                    await _networker.Answer(_asymEncrypter.ExportPublicKey(), content.frameuid.Value);
                     break;
                 case Frame.Type.secondInitializationStep:
                     Console.WriteLine("это второй этап подключения!");
-                    var decryptResult = _ntruEncrypter.TryDecrypt(pack.content);
+                    var decryptResult = _asymEncrypter.TryDecrypt(pack.content);
+                    _eManager.ImportReceiveKeyWithoutDecrypt(decryptResult);
+                    var encryptedSendKey = _eManager.EncryptWithReciveKey(_eManager.ExportSendKey());
 
-                    if (_eManager.AddPartOfKey(decryptResult) == 5)
-                    {
-                        _eManager.ApplyReceiveKeyWithParts();
-                        var encryptedSendKey = _eManager.EncryptWithReciveKey(_eManager.ExportSendKey());
-
-                        await _networker.Answer(encryptedSendKey, content.frameuid.Value);
-                    }
-                    else
-                    {
-                        await _networker.Answer([], content.frameuid.Value);
-                    }
+                    await _networker.Answer(encryptedSendKey, content.frameuid.Value);
                     break;
                 case Frame.Type.content:
                     Console.WriteLine("эта херь - пакет!");
@@ -122,7 +118,7 @@ namespace ServerSide
             }
             _cts.Dispose();
             _client.Dispose();
-            await _ntruEncrypter.DisposeAsync();
+            await _asymEncrypter.DisposeAsync();
         }
     }
 }
