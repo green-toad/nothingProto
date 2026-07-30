@@ -96,13 +96,19 @@ namespace ClientSide
                 await ReadFullAsync(_stream, portBytes, 0, 2);
                 targetPort = (portBytes[0] << 8) | portBytes[1];
 
-                IAsymetricEncryptor asymEncryptor = new X25519Encryptor();
+                IAsymetricEncryptor asymEncryptor = new EccEncryptor();
 
                 Console.Write("step 1\n");
+                var pubKey = asymEncryptor.ExportPublicKey();
+                var content = new byte[4 + 4 + pubKey.Length];
+                Buffer.BlockCopy(IPAddress.Parse(targetHost).GetAddressBytes(), 0, content, 0, 4);
+                Buffer.BlockCopy(ToBinary.LittleEndian(targetPort), 0, content, 4, 4);
+                Buffer.BlockCopy(pubKey, 0, content, 8, pubKey.Length);
+
                 var res = await _networker.Send(true, Frame.Pack(new Frame()
                     { 
                         type = Frame.Type.firstInitalizeStep, 
-                        content = ToBinary.ASCII($"{targetHost}~:~{targetPort}~:~{Convert.ToBase64String(asymEncryptor.ExportPublicKey())}")
+                        content = content
                     }), 10 * 1000);
                 
                 if (res == null) throw new ArgumentNullException(nameof(res), "Контент нетдрайвера выпал за борт :(");
