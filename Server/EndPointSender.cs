@@ -31,6 +31,8 @@ namespace Nothing.Server
             await _recivingTask;
             await _stream.DisposeAsync();
             OutputStream.Writer.Complete();
+            _client.Close();
+            _client.Dispose();
             _cts.Dispose();
         }
 

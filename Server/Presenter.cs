@@ -38,7 +38,7 @@ namespace Nothing.Server
         {
             await foreach(var sock in _deathQueue.Reader.ReadAllAsync(_cts.Token))
             {
-                if (_connections.TryGetValue(sock, out var res))
+                if (_connections.TryRemove(sock, out var res))
                 {
                     await res.DisposeAsync();
                 }
@@ -64,7 +64,7 @@ namespace Nothing.Server
             _deathQueue.Writer.Complete();
 
             _socket.Dispose();
-            
+
             _cts.Dispose();
         }
     }
