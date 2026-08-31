@@ -56,9 +56,9 @@ namespace Nothing.Server
         }
 
 
-        #pragma warning disable CA1816 // Методы Dispose должны вызывать SuppressFinalize
+        #pragma warning disable CA1816 // Методы Dispose должны вызывать SuppressFinalize (не, неа, не должны)
         public async ValueTask DisposeAsync()
-        #pragma warning restore CA1816 // Методы Dispose должны вызывать SuppressFinalize
+        #pragma warning restore CA1816
         {
             _cts.Cancel();
             foreach(var conn in _connections)

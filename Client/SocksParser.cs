@@ -28,7 +28,11 @@ namespace Nothing.Client
 
             _working = Task.Run(Working);
         }
-
+        public async Task Reading(byte[] content)
+        {
+            if (!_stream.CanWrite) return;
+            await _stream.WriteAsync(content);
+        }
         private async Task Working()
         {
             byte[] readBuffer = new byte[8192];
@@ -38,7 +42,6 @@ namespace Nothing.Client
                 {
                     int bytesRead = await _stream.ReadAsync(readBuffer, 0, readBuffer.Length);
                     if (bytesRead == 0) break;
-                    Console.WriteLine("опа че то поймал");
 
                     byte[] chunk = new byte[bytesRead];
                     Array.Copy(readBuffer, 0, chunk, 0, bytesRead);
@@ -129,7 +132,6 @@ namespace Nothing.Client
                 return false;
             }
         }
-
         private async Task<int> ReadByteAsync(NetworkStream stream)
         {
             byte[] b = new byte[1];
@@ -137,7 +139,6 @@ namespace Nothing.Client
             if (read == 0) throw new Exception("Соединение закрыто");
             return b[0];
         }
-
         private async Task ReadFullAsync(NetworkStream stream, byte[] buffer, int offset, int count)
         {
             int totalRead = 0;
@@ -148,7 +149,6 @@ namespace Nothing.Client
                 totalRead += read;
             }
         }
-
         public async ValueTask DisposeAsync()
         {
             _cts.Cancel();

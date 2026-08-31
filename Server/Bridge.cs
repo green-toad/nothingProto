@@ -33,10 +33,12 @@ namespace Nothing.Server
         }
 
         public async Task AcceptTarget(byte[] target)
-        { // два байта на порт, 32 на айпи
-            if (target.Length != 34) throw new Exception("не подходящий формат адреса");
+        {
+            if (target.Length != 6) 
+                throw new Exception("не подходящий формат адреса");
+
             UInt16 port = FromBinary.LittleEndian<UInt16>(target.AsSpan(0, 2));
-            IPAddress addr = IPAddress.Parse(target.AsSpan(2, 32));
+            IPAddress addr = new IPAddress(target.AsSpan(2, 4));
             _sender = new(new IPEndPoint(addr, port));
         }
         public async Task FirstEncryptInitalizeStep(byte[] firstData)

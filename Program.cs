@@ -9,11 +9,23 @@ namespace Nothing
     {
         public static async Task Main(string[] args)
         {
-            var a = new Server.Server();
+            string choise = Console.ReadLine();
+            if (choise == "s")
+            {
+                var a = new Server.Server();
 
-            Console.ReadKey();
+                Console.ReadKey();
 
-            await a.DisposeAsync();
+                await a.DisposeAsync();
+            }
+            else
+            {
+                var a = new Client.Client();
+
+                Console.ReadKey();
+
+                await a.DisposeAsync();
+            }
         }
     }
 }
