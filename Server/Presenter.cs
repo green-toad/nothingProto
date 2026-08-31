@@ -35,7 +35,7 @@ namespace Nothing.Server
             {
                 var newUser = await _socket.AcceptAsync(_cts.Token);
 
-                _connections.TryAdd(newUser, new Bridge(newUser, disconnectSync));
+                _connections.TryAdd(newUser, new Bridge(newUser, DisconnectSync));
             }
         }
 
@@ -50,12 +50,15 @@ namespace Nothing.Server
             }
         }
 
-        private void disconnectSync(Socket socket)
+        private void DisconnectSync(Socket socket)
         {
             _deathQueue.Writer.WriteAsync(socket); // оно считай синхронно, ибо канал не ограниченый
         }
 
+
+        #pragma warning disable CA1816 // Методы Dispose должны вызывать SuppressFinalize
         public async ValueTask DisposeAsync()
+        #pragma warning restore CA1816 // Методы Dispose должны вызывать SuppressFinalize
         {
             _cts.Cancel();
             foreach(var conn in _connections)

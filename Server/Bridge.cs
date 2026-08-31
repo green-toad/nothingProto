@@ -14,7 +14,7 @@ namespace Nothing.Server
     internal class Bridge : IAsyncDisposable
     {
         private readonly Listener _listener;
-        private EndpointSender _sender; // хочу ридонли, но не могу. . .
+        private EndpointSender _sender;
         private readonly Task CtT;
         private readonly Task TtC;
         private readonly CancellationTokenSource _cts = new();
@@ -79,8 +79,8 @@ namespace Nothing.Server
             {
                 try
                 {
-                // аналогично с шифрованием и здесь
-                await _listener.Answer(message);
+                    // аналогично с шифрованием и здесь
+                    await _listener.Answer(message);
                 }
                 catch
                 {

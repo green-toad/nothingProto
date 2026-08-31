@@ -2,7 +2,6 @@ using System;
 using AVcontrol;
 
 
-
 namespace Nothing.Message
 {
     public class Cat(byte[] content, Cat.Type type)
@@ -20,10 +19,9 @@ namespace Nothing.Message
 
         public static byte[] Pack(Cat cat)
         {
-            if (cat == null)
-                throw new ArgumentNullException(nameof(cat));
+            ArgumentNullException.ThrowIfNull(cat);
 
-            int contentLength = cat.content?.Length ?? 0;
+            int contentLength = cat.content.Length;
             byte[] result = new byte[1 + 4 + contentLength];
 
             result[0] = (byte)cat.type;
@@ -36,8 +34,8 @@ namespace Nothing.Message
         }
         public static Cat Unpack(byte[] data)
         {
-            if (data == null)
-                throw new ArgumentNullException(nameof(data));
+            ArgumentNullException.ThrowIfNull(data);
+
             if (data.Length < 5)
                 throw new ArgumentException("Data too short, minimum 5 bytes required.", nameof(data));
 
