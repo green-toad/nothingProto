@@ -1,13 +1,15 @@
-using System;
-using System.Buffers;
-using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Sockets;
-using System.Security.Cryptography;
 using System.Text;
+using System.Security.Cryptography;
+
+
+using Shared;
 using AVcontrol;
 using NetDriver.AE;
-using Shared;
+using System.Runtime.CompilerServices;
+
+
 
 namespace ClientSide
 {
@@ -18,7 +20,7 @@ namespace ClientSide
         private readonly NetworkStream _stream; 
         private readonly Networker _networker;
         private readonly Socket _socket = new(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-        private readonly EncryptionDevice _eManager = new();
+        private readonly EncryptionDevice _eManager = new(false, false);
         public Task working;
 
         public Connection(TcpClient listener)
@@ -27,8 +29,12 @@ namespace ClientSide
             _socket.Connect(new IPEndPoint(IPAddress.Parse("127.0.0.1"), 22233));
             _networker = new(_socket, Reading);
             _client = listener;
-            
+
             _stream = _client.GetStream();
+
+            working = Task.CompletedTask;
+            //  Коллега, Clarify please: working is not assigned
+            //  мне пришлось сделать это за тебя, и я без понятия сломало ли это что-то или починило
         }
 
         public async Task<bool> Configurate()
@@ -89,43 +95,53 @@ namespace ClientSide
                 byte[] portBytes = new byte[2];
                 await ReadFullAsync(_stream, portBytes, 0, 2);
                 targetPort = (portBytes[0] << 8) | portBytes[1];
-                
+
+                IAsymetricEncryptor asymEncryptor = new EccEncryptor();
 
                 Console.Write("step 1\n");
+                var pubKey = asymEncryptor.ExportPublicKey();
+                var content = new byte[4 + 4 + pubKey.Length];
+                Buffer.BlockCopy(IPAddress.Parse(targetHost).GetAddressBytes(), 0, content, 0, 4);
+                Buffer.BlockCopy(ToBinary.LittleEndian(targetPort), 0, content, 4, 4);
+                Buffer.BlockCopy(pubKey, 0, content, 8, pubKey.Length);
+
                 var res = await _networker.Send(true, Frame.Pack(new Frame()
                     { 
                         type = Frame.Type.firstInitalizeStep, 
-                        content = ToBinary.ASCII($"{targetHost}~:~{targetPort}")
+                        content = content
                     }), 10 * 1000);
                 
                 if (res == null) throw new ArgumentNullException(nameof(res), "Контент нетдрайвера выпал за борт :(");
 
 
                 _eManager.ApplyCustomSettings();
+                _eManager.UpdateSendKey();
 
-                using (var RSAkey = RSA.Create())
-                {
-                    Console.Write(res + "\n" + res.content + "\n" + res.type + "\n");
-                    RSAkey.ImportRSAPublicKey(res.content, out _);
 
-                    Console.Write("step 2\n");
-                    res = await _networker.Send(true, Frame.Pack(new Frame()
-                        { 
-                            type = Frame.Type.secondInitializationStep, 
-                            content = RSAkey.Encrypt(_eManager.ExportSendKey(), RSAEncryptionPadding.Pkcs1)
-                        }), 10 * 1000);
+                
+                // await using var ntru = new RsaAsymetricEncryptor();
+                asymEncryptor.ImportPublicKey(res.content);
 
-                    if (res == null) throw new ArgumentNullException(nameof(res), "Контент нетдрайвера погиб в бочке:(");
 
-                    Console.Write("step 3\n");
-                    _eManager.ImportEncryptedReceiveKey(res.content);
-                }
+                Console.Write("step 2\n");
+                // List<byte[]> parts = Split.ArrayUniformSize(_eManager.ExportSendKey(), 5, true);
+                
 
-                var gotThisBS = _eManager.ExportReceiveKey();
-                StringBuilder sb = new();
-                Console.Write("\n\tReceived reKey after handshake:\n ");
-                foreach (Byte aboba in gotThisBS) sb.Append(aboba);
-                Console.Write(sb.ToString() + "\n\n    ");
+                // foreach (var keyframe in parts)
+                // {
+                //     Console.Write(keyframe.Length + "\n");
+                res = await _networker.Send(true, Frame.Pack(new Frame()
+                    { 
+                        type = Frame.Type.secondInitializationStep, 
+                        content = asymEncryptor.TryEncrypt(_eManager.ExportSendKey())
+                    }), 10 * 1000);
+                // }
+
+                if (res == null) throw new ArgumentNullException(nameof(res), "Контент нетдрайвера погиб в бочке:(");
+
+                Console.Write("step 3\n");
+
+                bool importRes = _eManager.ImportEncryptedReceiveKey(res.content);
 
 
                 byte[] reply =

@@ -1,12 +1,13 @@
 using System;
-using System.Buffers;
+using System.Linq;
+
 
 namespace Shared
 {
     public class Frame
     {
         public Type type;
-        public byte[] content;
+        public byte[] content = [];
 
         public enum Type : byte
         {
@@ -24,9 +25,11 @@ namespace Shared
         }
         public static Frame Unpack(byte[] content)
         {
-            var frame = new Frame();
-            frame.type = (Type)content[0];
-            frame.content = new byte[content.Length - 1];
+            Frame frame = new()
+            {
+                type = (Type)content.FirstOrDefault(),
+                content = new byte[content.Length - 1]
+            };
             Buffer.BlockCopy(content, 1, frame.content, 0, content.Length - 1);
             return frame;
         }

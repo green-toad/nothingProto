@@ -1,15 +1,22 @@
+using System;
+using System.Collections.Generic;
+
 using JabrAPI;
+using AVcontrol;
 using static JabrAPI.OutputInterval.IntervalFilters.FilterType;
 using static JabrAPI.OutputInterval.IntervalFilters.FilterSelectionState;
 
 
 
+
 namespace Shared
 {
-    public class EncryptionDevice
+    public class EncryptionDevice(bool autoGenerateSendKey = true, bool autoGenerateReceiveKey = false)
     {
-        private readonly RE5.BinaryKey _sendReKey    = new();
-        private readonly RE5.BinaryKey _receiveReKey = new();
+        private readonly RE5.BinaryKey _sendReKey    = new(autoGenerateSendKey);
+        private readonly RE5.BinaryKey _receiveReKey = new(autoGenerateReceiveKey);
+
+        private readonly List<Byte[]> keyparts = [];
 
         public byte[] ExportSendKey()    => _sendReKey.ExportAsBinary();
         public byte[] ExportReceiveKey() => _receiveReKey.ExportAsBinary();
@@ -19,6 +26,8 @@ namespace Shared
         public void ApplyCustomSettings()
         {
             _sendReKey.Set.Default();
+            _sendReKey.Set.ShiftCount(3);
+
             _sendReKey.Noisifier.settings = new()
             {
                 DynamicOutputIntervals =
@@ -54,14 +63,23 @@ namespace Shared
         public void UpdateSendKey() => _sendReKey.Next();
 
 
-        public void ImportEncryptedReceiveKey(byte[] keyExport)
+        public bool ImportEncryptedReceiveKey(byte[] keyExport)
             => _receiveReKey.ImportFromBinary(RE5.Decrypt.WithNoise.Binary([.. keyExport], _sendReKey));
         
-        public void ImportEncryptedReceiveKeyWithoutDecrypt(byte[] keyExport)
+        public bool ImportReceiveKeyWithoutDecrypt(byte[] keyExport)
             => _receiveReKey.ImportFromBinary([.. keyExport]);
         
         public byte[] EncryptWithReciveKey(byte[] content)
             => [.. RE5.Encrypt.WithNoise.Binary([.. content], _receiveReKey)];
+
+        public int AddPartOfKey(byte[] keyFrame)
+        {
+            keyparts.Add(keyFrame);
+            return keyparts.Count;
+        }
+        
+        public bool ApplyReceiveKeyWithParts()
+            => _receiveReKey.ImportFromBinary(Combine.ToArray(keyparts));
 
 
         public byte[] Encrypt(byte[] content)

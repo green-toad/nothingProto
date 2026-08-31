@@ -1,18 +1,17 @@
-﻿using System;
-using System.Buffers;
-using System.Collections.Concurrent;
-using System.Net;
+﻿using System.Net;
 using System.Net.Sockets;
-using System.Text;
-using NetDriver.AE;
+using System.Collections.Concurrent;
+using Shared;
+
+
 
 namespace ClientSide
 {
     public class Program
     {
-        public static async Task Main(string[] args)
+        public static async Task Main()
         {
-            var listener = new TcpListener(IPAddress.Parse("127.0.0.1"), 8888);
+            var listener = new TcpListener(IPAddress.Parse("127.0.0.1"), 8088);
             listener.Start();
 
             var workers = new ConcurrentDictionary<Connection, Task>();

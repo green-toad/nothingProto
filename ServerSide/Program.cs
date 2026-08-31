@@ -1,15 +1,14 @@
-﻿using NetDriver.AE;
-using System.Collections.Concurrent;
-using System.Net;
+﻿using System.Net;
 using System.Net.Sockets;
-using System.Text;
 using System.Security.Cryptography;
+using System.Collections.Concurrent;
+
 
 namespace ServerSide
 {
     public class Program
     {
-        public static async Task Main(string[] arg)
+        public static async Task Main()
         {
             Console.WriteLine("Start . . .");
             var listener = new TcpListener(IPAddress.Any, 22233);
@@ -19,7 +18,6 @@ namespace ServerSide
             var cts = new CancellationTokenSource();
 
             var cleanTask = CleanupLoop(workers, cts.Token);
-            Console.WriteLine("Create fucking rsa key. . .");
             var acceptTask = AcceptLoopAsync(listener, workers, cts.Token);
 
             Console.WriteLine("Сервер запущен. Нажмите любую клавишу для остановки...");
@@ -37,25 +35,21 @@ namespace ServerSide
         {
             try
             {
-                using (var RSAkey = RSA.Create(8192))
+                while (!cancellationToken.IsCancellationRequested)
                 {
-                    byte[] parse = RSAkey.ExportRSAPublicKey();
-                    while (!cancellationToken.IsCancellationRequested)
+                    try
                     {
-                        try
-                        {
-                            var client = await listener.AcceptTcpClientAsync(cancellationToken);
-                            var connection = new Connection(client.Client, RSAkey, parse);
-                            workers.TryAdd(connection, connection.working);
-                        }
-                        catch (OperationCanceledException)
-                        {
-                            break;
-                        }
-                        catch (Exception ex)
-                        {
-                            Console.WriteLine($"[Ошибка при приёме соединения] {ex.Message}");
-                        }
+                        var client = await listener.AcceptTcpClientAsync(cancellationToken);
+                        var connection = new Connection(client.Client);
+                        workers.TryAdd(connection, connection.working);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        break;
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"[Ошибка при приёме соединения] {ex.Message}");
                     }
                 }
             }

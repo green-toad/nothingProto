@@ -1,11 +1,12 @@
-using NetDriver.AE;
-using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Sockets;
-using System.Text;
 using System.Security.Cryptography;
-using AVcontrol;
+
 using Shared;
+using AVcontrol;
+using NetDriver.AE;
+using System.Text;
+
 
 
 namespace ServerSide
@@ -13,48 +14,66 @@ namespace ServerSide
      public class Connection : IAsyncDisposable
     {
         private readonly Networker _networker;
-        private NetworkStream _stream;
+        private NetworkStream? _stream;
         private readonly TcpClient _client;
-        private readonly EncryptionDevice _eManager = new();
+        private readonly EncryptionDevice _eManager = new(false, false);
         private readonly CancellationTokenSource _cts = new();
-        private readonly RSA _rsaKey;
-        private readonly byte[] _rsaExport;
+        private readonly IAsymetricEncryptor _asymEncrypter;
         public readonly Task working;
 
-        public Connection(Socket con, RSA rsa, byte[] export)
+        public Connection(Socket con)
         {
             _networker = new(con, Reciver);
             _client = new TcpClient();
             working = Task.Run(Sending);
-            _rsaExport = export;
-            _rsaKey = rsa;
+
+            _eManager.ApplyCustomSettings();
+            _eManager.UpdateSendKey();
+
+            _asymEncrypter = new EccEncryptor();
+            // _asymEncrypter = new X25519Encryptor();
+            // _ntruEncrypter = new RsaAsymetricEncryptor();
         }
 
         private async Task Reciver(ResultContent content)
         {
-            Console.WriteLine("че то поймал!");
+            Console.Write("че то поймал!\n");
 
             var pack = Frame.Unpack(content.content);
             switch(pack.type)
             {
                 case Frame.Type.firstInitalizeStep:
-                    Console.WriteLine("это херь на подключение!");
-                    var addr = FromBinary.ASCII(pack.content).Split("~:~");
-                    Console.WriteLine($"{addr[0]} : {addr[1]}");
+                    Console.Write("это херь на подключение!\n");
+                    IPAddress ip = new IPAddress(pack.content[..4]);
+                    int port = BitConverter.ToInt32(pack.content[4..8]);
+                    byte[] publicKey = pack.content[8..];
+                    Console.WriteLine($"{ip.ToString()} : {port}");
+                    Console.Write($"{pack.content.Length}\n");
+                    
+                    _asymEncrypter.ImportPublicKey(publicKey);
+                    Console.Write($"{pack.content.Length}\n");
 
-                    await _client.ConnectAsync(IPAddress.Parse(addr[0]), int.Parse(addr[1]), _cts.Token);
+                    await _client.ConnectAsync(ip, port, _cts.Token);
                     _stream = _client.GetStream();
-                    Console.WriteLine("ответил, что все норм!");
 
-                    await _networker.Answer(_rsaExport, content.frameuid.Value);
+                    await _networker.Answer(_asymEncrypter.ExportPublicKey(), content.frameuid.Value);
                     break;
                 case Frame.Type.secondInitializationStep:
-                    _eManager.ImportEncryptedReceiveKeyWithoutDecrypt(_rsaKey.Decrypt(pack.content, RSAEncryptionPadding.Pkcs1));
-                    await _networker.Answer(_eManager.EncryptWithReciveKey(_eManager.ExportSendKey()), content.frameuid.Value);
+                    Console.Write("это второй этап подключения!\n");
+                    var decryptResult = _asymEncrypter.TryDecrypt(pack.content);
+                    Console.Write("ну, мы расшифровали\n");
+                    _eManager.ImportReceiveKeyWithoutDecrypt(decryptResult);
+                    Console.Write("ну, мы импортировали\n");
+                    var encryptedSendKey = _eManager.EncryptWithReciveKey(_eManager.ExportSendKey());
+                    Console.Write("ну, мы зашифровали\n");
+
+                    await _networker.Answer(encryptedSendKey, content.frameuid.Value);
+                    Console.Write("ну, мы отправили\n");
                     break;
                 case Frame.Type.content:
-                    Console.WriteLine("эта херь - пакет!");
-                    await _stream.WriteAsync(_eManager.Decrypt(pack.content), _cts.Token);
+                    Console.Write("эта херь - пакет!\n");
+                    if (_stream != null) await _stream.WriteAsync(
+                        _eManager.Decrypt(pack.content), _cts.Token);
                     break;
             }
         }
@@ -72,7 +91,7 @@ namespace ServerSide
                         continue;
                     }
 
-                    int bytesRead = await _stream.ReadAsync(readBuffer, 0, readBuffer.Length, _cts.Token);
+                    int bytesRead = await _stream.ReadAsync(readBuffer, _cts.Token);
                     if (bytesRead == 0) break;
 
                     byte[] chunk = new byte[bytesRead];
@@ -106,6 +125,7 @@ namespace ServerSide
             }
             _cts.Dispose();
             _client.Dispose();
+            await _asymEncrypter.DisposeAsync();
         }
     }
 }
