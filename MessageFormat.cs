@@ -1,6 +1,8 @@
 using System;
 using AVcontrol;
 
+
+
 namespace Nothing.Message
 {
     public class Cat(byte[] content, Cat.Type type)
