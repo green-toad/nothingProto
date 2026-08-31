@@ -1,0 +1,22 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="NetDriver">
+      <HintPath>lib/NetDriver.dll</HintPath>
+    </Reference>
+    <Reference Include="AVcontrol">
+      <HintPath>lib/AVcontrol.dll</HintPath>
+    </Reference>
+    <Reference Include="JabrAPI">
+      <HintPath>lib/JabrAPI.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
+</Project>
