@@ -6,7 +6,7 @@ using System.Threading.Channels;
 
 namespace Nothing.Server
 {
-    public class Server
+    public class Server : IAsyncDisposable
     {
         private readonly ConcurrentDictionary<Socket, Bridge> _connections = new();
         private readonly Channel<Socket> _deathQueue = Channel.CreateUnbounded<Socket>();
@@ -28,7 +28,7 @@ namespace Nothing.Server
         {
             while (!_cts.IsCancellationRequested)
             {
-                var newUser = await _socket.AcceptAsync();
+                var newUser = await _socket.AcceptAsync(_cts.Token);
 
                 _connections.TryAdd(newUser, new Bridge(newUser, disconnectSync));
             }
@@ -36,7 +36,7 @@ namespace Nothing.Server
 
         private async Task KillerTask()
         {
-            await foreach(var sock in _deathQueue.Reader.ReadAllAsync())
+            await foreach(var sock in _deathQueue.Reader.ReadAllAsync(_cts.Token))
             {
                 if (_connections.TryGetValue(sock, out var res))
                 {
@@ -47,7 +47,25 @@ namespace Nothing.Server
 
         private void disconnectSync(Socket socket)
         {
-            _deathQueue.Writer.WriteAsync(socket);
+            _deathQueue.Writer.WriteAsync(socket); // оно считай синхронно, ибо канал не ограниченый
+        }
+
+        public async ValueTask DisposeAsync()
+        {
+            _cts.Cancel();
+            foreach(var conn in _connections)
+            {
+                await conn.Value.DisposeAsync();
+                _connections.Remove(conn.Key, out _);
+            }
+            await _accepter;
+            await _killer;
+
+            _deathQueue.Writer.Complete();
+
+            _socket.Dispose();
+            
+            _cts.Dispose();
         }
     }
 }
