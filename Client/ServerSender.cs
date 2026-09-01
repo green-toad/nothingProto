@@ -17,8 +17,10 @@ namespace Nothing.Client
 
         public ServerSender(DisconnectEvent disconnect, Socket socket)
         {
+            Console.Write("начинаем создоваться\n");
             _socket = socket;
             _networker = new(_socket, IncomingAccepter, disconnect);
+            Console.Write("создались\n");
         }
 
         public async Task SendToServer(byte[] content)
@@ -30,10 +32,13 @@ namespace Nothing.Client
         {
             var message = Cat.Unpack(result.content);
 
+            Console.Write("поймал что то (client)\n");
+            Console.Write($"сообщение формата {message.type}\n");
+
             switch (message.type)
             {
                 case Cat.Type.Meat:
-                    await OutFromServer.Writer.WriteAsync(message.content);
+                    await OutFromServer.Writer.WriteAsync(message.content, _cts.Token);
                     break;
                 case Cat.Type.Target:
                     break; // здесь его быть не должно
@@ -44,9 +49,17 @@ namespace Nothing.Client
             }
         }
 
-        public ValueTask DisposeAsync()
+        public async ValueTask DisposeAsync()
         {
-            throw new NotImplementedException();
+            Console.Write("уничтожаемся\n");
+            _cts.Cancel();
+
+            await _networker.Dispose();
+            await _socket.DisconnectAsync(false);
+            _socket.Dispose();
+            OutFromServer.Writer.Complete();
+
+            _cts.Dispose();
         }
     }
 }

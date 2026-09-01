@@ -45,6 +45,7 @@ namespace Nothing.Server
             {
                 if (_connections.TryRemove(sock, out var res))
                 {
+                    Console.Write("kill connection\n");
                     await res.DisposeAsync();
                 }
             }

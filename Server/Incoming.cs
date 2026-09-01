@@ -45,6 +45,9 @@ namespace Nothing.Server
         {
             var message = Cat.Unpack(result.content);
 
+            Console.Write("поймал что то (server)\n");
+            Console.Write($"сообщение формата {message.type}");
+
             switch (message.type)
             {
                 case Cat.Type.Meat:
@@ -79,6 +82,9 @@ namespace Nothing.Server
                     {
                         _disconnect(_socket);
                     }
+                    break;
+                case Cat.Type.Disconnect:
+                    _disconnect(_socket);
                     break;
             }
         }

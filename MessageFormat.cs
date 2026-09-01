@@ -14,6 +14,7 @@ namespace Nothing.Message
             Meat = 0,
             FirstConfigurationKey = 2,
             SecondConfigurationKey = 3,
+            Disconnect= 4,
             Target = 1,
         }
 

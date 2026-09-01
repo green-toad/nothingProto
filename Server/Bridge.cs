@@ -18,6 +18,8 @@ namespace Nothing.Server
         private readonly Task CtT;
         private readonly Task TtC;
         private readonly CancellationTokenSource _cts = new();
+        private readonly DisconnectEvent _disconnectEvent;
+        private readonly Socket _socket;
 
         public Bridge(Socket socket, DisconnectEvent disconnectEventForListener)
         {
@@ -27,6 +29,9 @@ namespace Nothing.Server
                 AcceptTarget,
                 FirstEncryptInitalizeStep,
                 SecondEncryptInitalizeStep);
+
+            _disconnectEvent = disconnectEventForListener;
+            _socket = socket;
 
             CtT = Task.Run(FromClientToTarget);
             TtC = Task.Run(FromTargetToClient);
@@ -39,6 +44,7 @@ namespace Nothing.Server
 
             UInt16 port = FromBinary.LittleEndian<UInt16>(target.AsSpan(0, 2));
             IPAddress addr = new IPAddress(target.AsSpan(2, 4));
+            Console.Write($"настройка таргета -- {addr.ToString()} : {port}");
             _sender = new(new IPEndPoint(addr, port));
         }
         public async Task FirstEncryptInitalizeStep(byte[] firstData)
@@ -70,7 +76,7 @@ namespace Nothing.Server
                 }
                 catch
                 {
-                    // неа, просто что бы не падало
+                    _disconnectEvent(_socket);
                 }
             }
         }

@@ -21,11 +21,14 @@ namespace Nothing.Client
 
         public Bridge(Socket socket, TcpClient client, DisconnectEvent disconnect)
         {
-            _parser = new(client, AcceptTarget);
             _socket = socket;
             _socket.Connect(new IPEndPoint(IPAddress.Parse("127.0.0.1"), 23232)); // тесты
             // _socket.Connect(new IPEndPoint(IPAddress.Parse("144.31.71.55"), 23232)); // прод
             _sender = new(disconnect, _socket);
+
+            _parser = new(client, AcceptTarget);
+            if (! _parser.Initalize().Result) disconnect(socket);
+            _parser.working.ContinueWith((Task tsk) => {disconnect(socket);});
 
             CtT = Task.Run(FromClientToServer);
             TtC = Task.Run(FromServerToClient);
@@ -33,6 +36,7 @@ namespace Nothing.Client
 
         public async ValueTask DisposeAsync()
         {
+            await _sender.SendToServer(Cat.Pack(new Cat([], Cat.Type.Disconnect)));
             _cts.Cancel();
 
             await Task.WhenAny([CtT, TtC]);
@@ -53,7 +57,8 @@ namespace Nothing.Client
 
             byte[] ipBytes = target.Address.GetAddressBytes();
             Buffer.BlockCopy(ipBytes, 0, cat, 2, 4);
-
+            Console.Write("отправлен таргет\n");
+            Console.Write($"{_sender}\n");
             await _sender.SendToServer(Cat.Pack(new Cat(cat, Cat.Type.Target)));
         }
 
@@ -61,6 +66,7 @@ namespace Nothing.Client
         {
             await foreach(var content in _parser.OutputFromSocks.Reader.ReadAllAsync(_cts.Token))
             {// аналогично, шифрование можно расположить именно здесь
+                Console.Write("отправили сообщение\n");
                 await _sender.SendToServer(Cat.Pack(new Cat(content, Cat.Type.Meat)));
             }
         }
@@ -69,6 +75,7 @@ namespace Nothing.Client
         {
             await foreach(var content in _sender.OutFromServer.Reader.ReadAllAsync(_cts.Token))
             {// аналогично, шифрование можно расположить именно здесь
+                Console.Write("пришел контент\n");
                 await _parser.Reading(content);
             }
         }

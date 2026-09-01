@@ -17,7 +17,7 @@ namespace Nothing.Client
         public readonly Channel<byte[]> OutputFromSocks = Channel.CreateUnbounded<byte[]>();
         private readonly Func<IPEndPoint, Task> _initalizeTarget;
         private readonly CancellationTokenSource _cts = new();
-        private readonly Task _working;
+        public Task working { get; private set; } // тоже очень хочу рид онли, но, если сделать, то будут гонки =(
 
         public Socks5Parser(TcpClient client, Func<IPEndPoint, Task> initalizeTarget)
         {
@@ -25,8 +25,6 @@ namespace Nothing.Client
 
             _stream = _client.GetStream();
             _initalizeTarget = initalizeTarget;
-
-            _working = Task.Run(Working);
         }
         public async Task Reading(byte[] content)
         {
@@ -50,7 +48,7 @@ namespace Nothing.Client
                 }
                 catch(Exception e)
                 {
-                    Console.WriteLine(e);
+                    Console.Write(e + "\n");
                 }
             }
         }
@@ -84,7 +82,7 @@ namespace Nothing.Client
 
                 byte atyp = requestHeader[3];
 
-                string targetHost;
+                IPAddress targetHost = IPAddress.Any;
                 int targetPort;
 
 
@@ -93,18 +91,19 @@ namespace Nothing.Client
                     case 1:
                         byte[] ipv4 = new byte[4];
                         await ReadFullAsync(_stream, ipv4, 0, 4);
-                        targetHost = new IPAddress(ipv4).ToString();
+                        targetHost = new IPAddress(ipv4);
                         break;
                     case 3:
-                        byte len = (byte)await ReadByteAsync(_stream);
-                        byte[] domainBytes = new byte[len];
-                        await ReadFullAsync(_stream, domainBytes, 0, len);
-                        targetHost = Encoding.UTF8.GetString(domainBytes);
+                    // этого никогда не сущестовало
+                        // byte len = (byte)await ReadByteAsync(_stream);
+                        // byte[] domainBytes = new byte[len];
+                        // await ReadFullAsync(_stream, domainBytes, 0, len);
+                        // targetHost = Encoding.UTF8.GetString(domainBytes);
                         break;
                     case 4:
                         byte[] ipv6 = new byte[16];
                         await ReadFullAsync(_stream, ipv6, 0, 16);
-                        targetHost = new IPAddress(ipv6).ToString();
+                        targetHost = new IPAddress(ipv6);
                         break;
                     default:
                         throw new Exception($"wtf is this: {atyp}");
@@ -114,7 +113,8 @@ namespace Nothing.Client
                 await ReadFullAsync(_stream, portBytes, 0, 2);
                 targetPort = (portBytes[0] << 8) | portBytes[1];
 
-                await _initalizeTarget(new IPEndPoint(IPAddress.Parse(targetHost), targetPort));
+                if (targetHost == IPAddress.Any) throw new Exception("wrong target");
+                await _initalizeTarget(new IPEndPoint(targetHost, targetPort));
 
                 byte[] reply =
                 [
@@ -124,11 +124,13 @@ namespace Nothing.Client
                 ];
                 await _stream.WriteAsync(reply, 0, reply.Length);
 
+
+                working = Task.Run(Working);
                 return true;
             }
             catch (Exception e)
             {
-                Console.WriteLine("залупа на коннекте: " + e );
+                Console.Write("залупа на коннекте: " + e  + "\n");
                 return false;
             }
         }
@@ -164,11 +166,11 @@ namespace Nothing.Client
                 _client?.Close();
             }
             catch { }
-            if (_working != null)
+            if (working != null)
             {
                 try
                 {
-                    await _working.ConfigureAwait(false);
+                    await working.ConfigureAwait(false);
                 }
                 catch (OperationCanceledException)
                 {

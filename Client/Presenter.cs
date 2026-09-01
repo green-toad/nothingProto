@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
@@ -43,6 +44,7 @@ namespace Nothing.Client
             {
                 if (_connections.TryRemove(deceased, out var res))
                 {
+                    Console.Write("kill connection\n");
                     await res.DisposeAsync();
                 }
             }
