@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using AVcontrol;
 using NetDriver.AE;
+using Nothing.Cryptography;
 using Nothing.Message;
 
 namespace Nothing.Client
@@ -16,6 +17,8 @@ namespace Nothing.Client
         private readonly Socks5Parser _parser;
         private readonly Socket _socket;
 
+        private readonly X25519_Device _cryptoDevice;
+
         private readonly Task CtT;
         private readonly Task TtC;
 
@@ -26,6 +29,7 @@ namespace Nothing.Client
             // _socket.Connect(new IPEndPoint(IPAddress.Parse("127.0.0.1"), 22233)); // тесты
             _socket.Connect(new IPEndPoint(IPAddress.Parse("144.31.71.55"), 22233)); // прод
             Console.Write("соеденились с сервером\n");
+            _cryptoDevice = new();
             _sender = new(disconnect, _socket);
 
             _parser = new(client, AcceptTarget);

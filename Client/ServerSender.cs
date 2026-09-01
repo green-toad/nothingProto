@@ -30,6 +30,13 @@ namespace Nothing.Client
             await _networker.Send(false, content);
         }
 
+        public async Task<byte[]?> SendWithAnswer(byte[] content)
+        {
+            var res = await _networker.Send(true, content);
+            if (res != null) return res.content;
+            return null;
+        }
+
         private async Task IncomingAccepter(ResultContent result)
         {
             var message = Cat.Unpack(result.content);
