@@ -46,7 +46,7 @@ namespace Nothing.Server
             var message = Cat.Unpack(result.content);
 
             Console.Write("поймал что то (server)\n");
-            Console.Write($"сообщение формата {message.type}");
+            Console.Write($"сообщение формата {message.type}\n");
 
             switch (message.type)
             {
@@ -91,6 +91,7 @@ namespace Nothing.Server
 
         public async Task Answer(byte[] result)
         {
+            Console.Write("засылаем контент обратно клиенту\n");
             await _networker.Send(false, result);
         }
 

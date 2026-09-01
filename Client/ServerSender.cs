@@ -11,6 +11,7 @@ namespace Nothing.Client
     internal class ServerSender : IAsyncDisposable
     {
         private readonly Networker _networker;
+        private readonly DisconnectEvent _disconnect;
         private readonly Socket _socket;
         private readonly CancellationTokenSource _cts = new();
         public readonly Channel<byte[]> OutFromServer = Channel.CreateUnbounded<byte[]>();
@@ -18,6 +19,7 @@ namespace Nothing.Client
         public ServerSender(DisconnectEvent disconnect, Socket socket)
         {
             Console.Write("начинаем создоваться\n");
+            _disconnect = disconnect;
             _socket = socket;
             _networker = new(_socket, IncomingAccepter, disconnect);
             Console.Write("создались\n");
@@ -45,6 +47,9 @@ namespace Nothing.Client
                 case Cat.Type.FirstConfigurationKey:
                     break;
                 case Cat.Type.SecondConfigurationKey:
+                    break;
+                case Cat.Type.Disconnect:
+                    _disconnect(_socket);
                     break;
             }
         }

@@ -41,6 +41,7 @@ namespace Nothing.Server
 
         public async Task Request(byte[] content)
         {
+            Console.Write("отправляем полученный контент\n");
             await _stream.WriteAsync(content, _cts.Token);
         }
 
@@ -56,13 +57,13 @@ namespace Nothing.Server
                         await Task.Delay(100, _cts.Token);
                         continue;
                     }
-
+                    Console.Write("ловим контент от таргета\n");
                     int bytesRead = await _stream.ReadAsync(readBuffer, 0, readBuffer.Length, _cts.Token);
                     if (bytesRead == 0) break;
 
                     byte[] chunk = new byte[bytesRead];
                     Array.Copy(readBuffer, 0, chunk, 0, bytesRead);
-
+                    Console.Write("отправляем контент в стрим\n");
                     await OutputStream.Writer.WriteAsync(chunk, _cts.Token);
                 }
                 catch (OperationCanceledException)

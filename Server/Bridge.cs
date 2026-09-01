@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 
 using AVcontrol;
 using NetDriver.AE;
+using Nothing.Message;
 
 
 
@@ -16,7 +17,7 @@ namespace Nothing.Server
         private readonly Listener _listener;
         private EndpointSender _sender;
         private readonly Task CtT;
-        private readonly Task TtC;
+        private Task TtC;
         private readonly CancellationTokenSource _cts = new();
         private readonly DisconnectEvent _disconnectEvent;
         private readonly Socket _socket;
@@ -34,7 +35,6 @@ namespace Nothing.Server
             _socket = socket;
 
             CtT = Task.Run(FromClientToTarget);
-            TtC = Task.Run(FromTargetToClient);
         }
 
         public async Task AcceptTarget(byte[] target)
@@ -46,6 +46,7 @@ namespace Nothing.Server
             IPAddress addr = new IPAddress(target.AsSpan(2, 4));
             Console.Write($"настройка таргета -- {addr.ToString()} : {port}");
             _sender = new(new IPEndPoint(addr, port));
+            TtC = Task.Run(FromTargetToClient);
         }
         public async Task FirstEncryptInitalizeStep(byte[] firstData)
         { // по идеи, сначала зашифруемся, потом уже таргет прокинем.
@@ -58,6 +59,7 @@ namespace Nothing.Server
 
         public async ValueTask DisposeAsync()
         {
+            await _listener.Answer(Cat.Pack(new Cat([], Cat.Type.Disconnect)));
             _cts.Cancel();
 
             await Task.WhenAll(CtT, TtC);
@@ -83,16 +85,18 @@ namespace Nothing.Server
 
         private async Task FromTargetToClient()
         {
+            Console.Write(_sender + "\n");
             await foreach (var message in _sender.OutputStream.Reader.ReadAllAsync(_cts.Token))
             {
                 try
                 {
                     // аналогично с шифрованием и здесь
-                    await _listener.Answer(message);
+                    Console.Write("вынимаем контент из бриджа\n");
+                    await _listener.Answer(Cat.Pack(new Cat(message, Cat.Type.Meat)));
                 }
-                catch
+                catch (Exception e)
                 {
-                    // неа, просто что бы не падало
+                    Console.Write(e + "\n");
                 }
             }
         }
