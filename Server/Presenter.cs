@@ -23,7 +23,7 @@ namespace Nothing.Server
         public Server()
         {
             _socket = new(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-            _socket.Bind(new IPEndPoint(IPAddress.Any, 23232));
+            _socket.Bind(new IPEndPoint(IPAddress.Any, 22233));
             _socket.Listen();
             _accepter = Task.Run(AcceptingNewConnections);
             _killer = Task.Run(KillerTask);

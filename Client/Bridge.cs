@@ -21,9 +21,11 @@ namespace Nothing.Client
 
         public Bridge(Socket socket, TcpClient client, DisconnectEvent disconnect)
         {
+            Console.Write("создан мост\n");
             _socket = socket;
-            _socket.Connect(new IPEndPoint(IPAddress.Parse("127.0.0.1"), 23232)); // тесты
-            // _socket.Connect(new IPEndPoint(IPAddress.Parse("144.31.71.55"), 23232)); // прод
+            // _socket.Connect(new IPEndPoint(IPAddress.Parse("127.0.0.1"), 22233)); // тесты
+            _socket.Connect(new IPEndPoint(IPAddress.Parse("144.31.71.55"), 22233)); // прод
+            Console.Write("соеденились с сервером\n");
             _sender = new(disconnect, _socket);
 
             _parser = new(client, AcceptTarget);
