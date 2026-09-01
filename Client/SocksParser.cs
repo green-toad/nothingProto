@@ -25,6 +25,8 @@ namespace Nothing.Client
 
             _stream = _client.GetStream();
             _initalizeTarget = initalizeTarget;
+
+            working = Task.CompletedTask;
         }
         public async Task Reading(byte[] content)
         {

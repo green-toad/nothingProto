@@ -22,6 +22,7 @@ namespace Nothing.Server
         private readonly DisconnectEvent _disconnectEvent;
         private readonly Socket _socket;
 
+        #pragma warning disable CS8618
         public Bridge(Socket socket, DisconnectEvent disconnectEventForListener)
         {
             _listener = new(
@@ -36,6 +37,7 @@ namespace Nothing.Server
 
             CtT = Task.Run(FromClientToTarget);
         }
+        #pragma warning restore CS8618
 
         public async Task AcceptTarget(byte[] target)
         {

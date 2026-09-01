@@ -9,7 +9,7 @@ namespace Nothing
     {
         public static async Task Main(string[] args)
         {
-            string choise = Console.ReadLine();
+            string? choise = Console.ReadLine();
             if (choise == "s")
             {
                 Console.Write("Запущен сервер\n");
