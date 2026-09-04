@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 
 using AVcontrol;
 using NetDriver.AE;
+using Nothing.Cryptography;
 using Nothing.Message;
 
 
@@ -22,6 +23,8 @@ namespace Nothing.Server
         private readonly DisconnectEvent _disconnectEvent;
         private readonly Socket _socket;
 
+        private readonly X25519_Device _cryptoDevice;
+
         #pragma warning disable CS8618
         public Bridge(Socket socket, DisconnectEvent disconnectEventForListener)
         {
@@ -31,6 +34,8 @@ namespace Nothing.Server
                 AcceptTarget,
                 FirstEncryptInitalizeStep,
                 SecondEncryptInitalizeStep);
+            
+            _cryptoDevice = new();
 
             _disconnectEvent = disconnectEventForListener;
             _socket = socket;
@@ -46,13 +51,15 @@ namespace Nothing.Server
 
             UInt16 port = FromBinary.LittleEndian<UInt16>(target.AsSpan(0, 2));
             IPAddress addr = new IPAddress(target.AsSpan(2, 4));
-            Console.Write($"настройка таргета -- {addr.ToString()} : {port}");
+            Console.Write($"настройка таргета -- {addr.ToString()} : {port}\n");
             _sender = new(new IPEndPoint(addr, port));
             TtC = Task.Run(FromTargetToClient);
         }
-        public async Task FirstEncryptInitalizeStep(byte[] firstData)
+        public async Task FirstEncryptInitalizeStep(Guid uid, byte[] message)
         { // по идеи, сначала зашифруемся, потом уже таргет прокинем.
-            throw new Exception("пакачто пуста");
+            Console.Write("получен ключь шифрования\n");
+            _cryptoDevice.ComputeSharedSecret(message);
+            await _listener.Answer(uid, message);
         }
         public async Task SecondEncryptInitalizeStep(byte[] secondData)
         {
@@ -61,7 +68,7 @@ namespace Nothing.Server
 
         public async ValueTask DisposeAsync()
         {
-            await _listener.Answer(Cat.Pack(new Cat([], Cat.Type.Disconnect)));
+            await _listener.SendResultData(Cat.Pack(new Cat([], Cat.Type.Disconnect)));
             _cts.Cancel();
 
             await Task.WhenAll(CtT, TtC);
@@ -94,7 +101,7 @@ namespace Nothing.Server
                 {
                     // аналогично с шифрованием и здесь
                     Console.Write("вынимаем контент из бриджа\n");
-                    await _listener.Answer(Cat.Pack(new Cat(message, Cat.Type.Meat)));
+                    await _listener.SendResultData(Cat.Pack(new Cat(message, Cat.Type.Meat)));
                 }
                 catch (Exception e)
                 {

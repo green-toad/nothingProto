@@ -20,14 +20,14 @@ namespace Nothing.Server
         public readonly Channel<byte[]> OutputMessage = Channel.CreateUnbounded<byte[]>();
 
         private readonly Func<byte[], Task> _acceptTarget;
-        private readonly Func<byte[], Task> _stepOne;
+        private readonly Func<Guid, byte[], Task> _stepOne;
         private readonly Func<byte[], Task> _stepTwo;
 
         public Listener(
             Socket socket, 
             DisconnectEvent disconnect,
             Func<byte[], Task> acceptTarget,
-            Func<byte[], Task> stepOne,
+            Func<Guid, byte[], Task> stepOne,
             Func<byte[], Task> stepTwo
         )
         {
@@ -66,7 +66,7 @@ namespace Nothing.Server
                 case Cat.Type.FirstConfigurationKey:
                     try
                     {
-                        await _stepOne(message.content);
+                        await _stepOne(result.frameuid.Value, message.content);
                     }
                     catch
                     {
@@ -89,10 +89,15 @@ namespace Nothing.Server
             }
         }
 
-        public async Task Answer(byte[] result)
+        public async Task SendResultData(byte[] result)
         {
             Console.Write("засылаем контент обратно клиенту\n");
             await _networker.Send(false, result);
+        }
+        
+        public async Task Answer(Guid frameuid, byte[] content)
+        {
+            await _networker.Answer(content, frameuid);
         }
 
         public async ValueTask DisposeAsync()

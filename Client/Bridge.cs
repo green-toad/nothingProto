@@ -16,6 +16,7 @@ namespace Nothing.Client
         private readonly ServerSender _sender;
         private readonly Socks5Parser _parser;
         private readonly Socket _socket;
+        private readonly DisconnectEvent _disconnect;
 
         private readonly X25519_Device _cryptoDevice;
 
@@ -26,11 +27,14 @@ namespace Nothing.Client
         {
             Console.Write("создан мост\n");
             _socket = socket;
-            // _socket.Connect(new IPEndPoint(IPAddress.Parse("127.0.0.1"), 22233)); // тесты
-            _socket.Connect(new IPEndPoint(IPAddress.Parse("144.31.71.55"), 22233)); // прод
+            _socket.Connect(new IPEndPoint(IPAddress.Parse("127.0.0.1"), 22233)); // тесты
+            // _socket.Connect(new IPEndPoint(IPAddress.Parse("144.31.71.55"), 22233)); // прод
             Console.Write("соеденились с сервером\n");
+            _disconnect = disconnect;
             _cryptoDevice = new();
             _sender = new(disconnect, _socket);
+
+            
 
             _parser = new(client, AcceptTarget);
             if (! _parser.Initalize().Result) disconnect(socket);
@@ -38,6 +42,19 @@ namespace Nothing.Client
 
             CtT = Task.Run(FromClientToServer);
             TtC = Task.Run(FromServerToClient);
+        }
+
+        public async Task Iitalize() // необходимо вызвать при создании
+        {
+            var otherKey = await _sender.SendWithAnswer(_cryptoDevice.GetPublicKey());
+            if (otherKey == null) _disconnect(_socket);
+            #pragma warning disable CS8604 // очевидно, я проверил
+            _cryptoDevice.ComputeSharedSecret(otherKey);
+            #pragma warning restore CS8604
+
+            Console.Write("синхронизирован ключь с сервером\n");
+            // надо будет пробросить симметричный ключь но, его пока что нет, поэтому шифруем по плохому
+            
         }
 
         public async ValueTask DisposeAsync()

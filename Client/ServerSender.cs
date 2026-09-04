@@ -49,12 +49,6 @@ namespace Nothing.Client
                 case Cat.Type.Meat:
                     await OutFromServer.Writer.WriteAsync(message.content, _cts.Token);
                     break;
-                case Cat.Type.Target:
-                    break; // здесь его быть не должно
-                case Cat.Type.FirstConfigurationKey:
-                    break;
-                case Cat.Type.SecondConfigurationKey:
-                    break;
                 case Cat.Type.Disconnect:
                     _disconnect(_socket);
                     break;

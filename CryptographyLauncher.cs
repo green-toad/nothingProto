@@ -15,7 +15,7 @@ namespace Nothing.Cryptography
         private readonly X25519KeyPairGenerator _generator;
         private readonly X25519Agreement _keyAgreement;
         private byte[] SharedSecret;
-        
+
         #pragma warning disable CS8618 // так надо
         public X25519_Device()
         {
@@ -36,7 +36,6 @@ namespace Nothing.Cryptography
             
             return publicKey.GetEncoded();
         }
-
         public void ComputeSharedSecret(byte[] otherPkey)
         {
             if (_privateKey is not X25519PrivateKeyParameters privateKey)
@@ -50,7 +49,6 @@ namespace Nothing.Cryptography
             SharedSecret = new byte[_keyAgreement.AgreementSize];
             _keyAgreement.CalculateAgreement(otherPublicKey, SharedSecret, 0);
         }
-
         public byte[] DeriveKey(string salt, int keyLength)
         {
             using var hmac = new HMACSHA256(SharedSecret);
@@ -68,8 +66,7 @@ namespace Nothing.Cryptography
             }
             return derived;
         }
-
-        byte[] EncryptData(byte[] data)
+        public byte[] EncryptData(byte[] data)
         {
             byte[] key = DeriveKey("there_is_nothing_to_see", 32);
             byte[] nonce = new byte[12];
@@ -87,9 +84,7 @@ namespace Nothing.Cryptography
             Buffer.BlockCopy(ciphertext, 0, result, nonce.Length + tag.Length, ciphertext.Length);
             return result;
         }
-
-        // 3. Расшифровка
-        byte[] DecryptData(byte[] encryptedPackage)
+        public byte[] DecryptData(byte[] encryptedPackage)
         {
             byte[] key = DeriveKey("there_is_nothing_to_see", 32);
             int nonceLen = 12, tagLen = 16;

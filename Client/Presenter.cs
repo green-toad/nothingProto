@@ -32,7 +32,9 @@ namespace Nothing.Client
             {
                 var client = await _listener.AcceptTcpClientAsync(_cts.Token);
                 var sock = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-                _connections.TryAdd(sock, new Bridge(sock, client, Disconnect));
+                var bridge = new Bridge(sock, client, Disconnect);
+                await bridge.Iitalize();
+                _connections.TryAdd(sock, bridge);
             }
         }
 
