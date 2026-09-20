@@ -4,6 +4,7 @@ using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 using AVcontrol;
+using JabrAPI;
 using NetDriver.AE;
 using Nothing.Cryptography;
 using Nothing.Message;
@@ -13,15 +14,20 @@ namespace Nothing.Client
     internal class Bridge : IAsyncDisposable
     {
         private readonly CancellationTokenSource _cts = new();
+
         private readonly ServerSender _sender;
         private readonly Socks5Parser _parser;
+
         private readonly Socket _socket;
+
         private readonly DisconnectEvent _disconnect;
 
         private readonly X25519_Device _cryptoDevice;
 
-        private readonly Task CtT;
+        private Task CtT;           // увы, надо запускать только после инициализации ключей
         private readonly Task TtC;
+
+        private readonly SymCryptoDevice _myCrypto = new();
 
         public Bridge(Socket socket, TcpClient client, DisconnectEvent disconnect)
         {
@@ -29,7 +35,7 @@ namespace Nothing.Client
             _socket = socket;
             _socket.Connect(new IPEndPoint(IPAddress.Parse("127.0.0.1"), 22233)); // тесты
             // _socket.Connect(new IPEndPoint(IPAddress.Parse("144.31.71.55"), 22233)); // прод
-            Console.Write("соеденились с сервером\n");
+
             _disconnect = disconnect;
             _cryptoDevice = new();
             _sender = new(disconnect, _socket);
@@ -40,21 +46,40 @@ namespace Nothing.Client
             if (! _parser.Initalize().Result) disconnect(socket);
             _parser.working.ContinueWith((Task tsk) => {disconnect(socket);});
 
-            CtT = Task.Run(FromClientToServer);
+            
             TtC = Task.Run(FromServerToClient);
         }
 
         public async Task Iitalize() // необходимо вызвать при создании
         {
-            var otherKey = await _sender.SendWithAnswer(_cryptoDevice.GetPublicKey());
+            var otherKey = await _sender.SendWithAnswer(
+                Cat.Pack(
+                    new Cat(
+                        _cryptoDevice.GetPublicKey(),
+                        Cat.Type.FirstConfigurationKey
+                    )
+                )
+            );
             if (otherKey == null) _disconnect(_socket);
             #pragma warning disable CS8604 // очевидно, я проверил
             _cryptoDevice.ComputeSharedSecret(otherKey);
             #pragma warning restore CS8604
 
-            Console.Write("синхронизирован ключь с сервером\n");
-            // надо будет пробросить симметричный ключь но, его пока что нет, поэтому шифруем по плохому
             
+            if ((await _sender.SendWithAnswer(
+                Cat.Pack(
+                    new Cat(
+                        _cryptoDevice.EncryptData(_myCrypto.exportKey()),
+                        Cat.Type.SecondConfigurationKey
+                    )
+                )
+            )) == null)
+            {
+                _disconnect(_socket);
+            }
+
+
+            CtT = Task.Run(FromClientToServer);
         }
 
         public async ValueTask DisposeAsync()
@@ -89,8 +114,7 @@ namespace Nothing.Client
         {
             await foreach(var content in _parser.OutputFromSocks.Reader.ReadAllAsync(_cts.Token))
             {// аналогично, шифрование можно расположить именно здесь
-                Console.Write("отправили сообщение\n");
-                await _sender.SendToServer(Cat.Pack(new Cat(content, Cat.Type.Meat)));
+                await _sender.SendToServer(Cat.Pack(new Cat(_myCrypto.Encrypt(content), Cat.Type.Meat)));
             }
         }
 
@@ -98,8 +122,7 @@ namespace Nothing.Client
         {
             await foreach(var content in _sender.OutFromServer.Reader.ReadAllAsync(_cts.Token))
             {// аналогично, шифрование можно расположить именно здесь
-                Console.Write("пришел контент\n");
-                await _parser.Reading(content);
+                await _parser.Reading(_myCrypto.Decript(content));
             }
         }
     }

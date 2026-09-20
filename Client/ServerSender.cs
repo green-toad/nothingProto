@@ -39,6 +39,8 @@ namespace Nothing.Client
 
         private async Task IncomingAccepter(ResultContent result)
         {
+            Console.Write("в меня что то вошло!\n");
+
             var message = Cat.Unpack(result.content);
 
             Console.Write("поймал что то (client)\n");
@@ -60,6 +62,7 @@ namespace Nothing.Client
             Console.Write("уничтожаемся\n");
             _cts.Cancel();
 
+            Console.Write("нетворкер точно убит!\n");
             await _networker.Dispose();
             await _socket.DisconnectAsync(false);
             _socket.Dispose();

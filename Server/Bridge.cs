@@ -18,10 +18,12 @@ namespace Nothing.Server
         private readonly Listener _listener;
         private EndpointSender _sender;
         private readonly Task CtT;
-        private Task TtC;
+        private Task TtC;               // инициализируем с задержкой
         private readonly CancellationTokenSource _cts = new();
         private readonly DisconnectEvent _disconnectEvent;
         private readonly Socket _socket;
+
+        private readonly SymCryptoDevice _myCrypto = new();
 
         private readonly X25519_Device _cryptoDevice;
 
@@ -57,13 +59,13 @@ namespace Nothing.Server
         }
         public async Task FirstEncryptInitalizeStep(Guid uid, byte[] message)
         { // по идеи, сначала зашифруемся, потом уже таргет прокинем.
-            Console.Write("получен ключь шифрования\n");
             _cryptoDevice.ComputeSharedSecret(message);
-            await _listener.Answer(uid, message);
+            await _listener.Answer(uid, _cryptoDevice.GetPublicKey());
         }
-        public async Task SecondEncryptInitalizeStep(byte[] secondData)
+        public async Task SecondEncryptInitalizeStep(Guid uid, byte[] secondData)
         {
-            throw new Exception("пакачто пуста");
+            _myCrypto.importKey(_cryptoDevice.DecryptData(secondData));
+            await _listener.Answer(uid, [0, 0]);
         }
 
         public async ValueTask DisposeAsync()
@@ -83,10 +85,11 @@ namespace Nothing.Server
             {
                 try{
                 // скорее всего именно суды мы вставим расшифровку, если конечно не будем (а точнее пока не) сувать ее в подкопотню нетдрайвера
-                    await _sender.Request(message);
+                    await _sender.Request(_myCrypto.Decript(message));
                 }
-                catch
+                catch (Exception e)
                 {
+                    Console.Write(e + "\n");
                     _disconnectEvent(_socket);
                 }
             }
@@ -94,18 +97,17 @@ namespace Nothing.Server
 
         private async Task FromTargetToClient()
         {
-            Console.Write(_sender + "\n");
             await foreach (var message in _sender.OutputStream.Reader.ReadAllAsync(_cts.Token))
             {
                 try
                 {
                     // аналогично с шифрованием и здесь
-                    Console.Write("вынимаем контент из бриджа\n");
-                    await _listener.SendResultData(Cat.Pack(new Cat(message, Cat.Type.Meat)));
+                    await _listener.SendResultData(Cat.Pack(new Cat(_myCrypto.Encrypt(message), Cat.Type.Meat)));
                 }
                 catch (Exception e)
                 {
                     Console.Write(e + "\n");
+                    _disconnectEvent(_socket);
                 }
             }
         }

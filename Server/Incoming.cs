@@ -21,14 +21,14 @@ namespace Nothing.Server
 
         private readonly Func<byte[], Task> _acceptTarget;
         private readonly Func<Guid, byte[], Task> _stepOne;
-        private readonly Func<byte[], Task> _stepTwo;
+        private readonly Func<Guid, byte[], Task> _stepTwo;
 
         public Listener(
             Socket socket, 
             DisconnectEvent disconnect,
             Func<byte[], Task> acceptTarget,
             Func<Guid, byte[], Task> stepOne,
-            Func<byte[], Task> stepTwo
+            Func<Guid, byte[], Task> stepTwo
         )
         {
             _socket = socket;
@@ -76,7 +76,7 @@ namespace Nothing.Server
                 case Cat.Type.SecondConfigurationKey:
                     try
                     {
-                        await _stepTwo(message.content);
+                        await _stepTwo(result.frameuid.Value, message.content);
                     }
                     catch
                     {
@@ -91,7 +91,6 @@ namespace Nothing.Server
 
         public async Task SendResultData(byte[] result)
         {
-            Console.Write("засылаем контент обратно клиенту\n");
             await _networker.Send(false, result);
         }
         
@@ -106,6 +105,7 @@ namespace Nothing.Server
 
             await _socket.DisconnectAsync(false);
             _socket.Dispose();
+            Console.Write("нетворкер точно убит!\n");
             await _networker.Dispose();
             OutputMessage.Writer.Complete();
 

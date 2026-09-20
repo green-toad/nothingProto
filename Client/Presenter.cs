@@ -52,6 +52,7 @@ namespace Nothing.Client
 
         private void Disconnect(Socket sock)
         {
+            Console.Write("меня вызвали!\n");
             _deathQueue.Writer.WriteAsync(sock);
         }
 
