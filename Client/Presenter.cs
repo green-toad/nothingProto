@@ -42,11 +42,18 @@ namespace Nothing.Client
         {
             await foreach (var deceased in _deathQueue.Reader.ReadAllAsync(_cts.Token))
             {
-                if (_connections.TryRemove(deceased, out var res))
-                {
-                    Console.Write("kill connection\n");
-                    await res.DisposeAsync();
-                }
+                try{
+                    if (_connections.TryRemove(deceased, out var res))
+                    {
+                        Console.Write("kill connection\n");
+                        try{
+                            await res.DisposeAsync();
+                        }
+                        catch(TaskCanceledException)
+                        {}
+                        catch(Exception e){Console.Write(e + "\n");}
+                    }
+                }catch(Exception e){Console.Write(e + "\n");}
             }
         }
 

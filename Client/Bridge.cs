@@ -33,8 +33,9 @@ namespace Nothing.Client
         {
             Console.Write("создан мост\n");
             _socket = socket;
-            _socket.Connect(new IPEndPoint(IPAddress.Parse("127.0.0.1"), 22233)); // тесты
+            // _socket.Connect(new IPEndPoint(IPAddress.Parse("127.0.0.1"), 22233)); // тесты
             // _socket.Connect(new IPEndPoint(IPAddress.Parse("144.31.71.55"), 22233)); // прод
+            _socket.Connect(new IPEndPoint(IPAddress.Parse("81.29.149.18"), 22233)); // прод
 
             _disconnect = disconnect;
             _cryptoDevice = new();
@@ -87,12 +88,10 @@ namespace Nothing.Client
             await _sender.SendToServer(Cat.Pack(new Cat([], Cat.Type.Disconnect)));
             _cts.Cancel();
 
-            await Task.WhenAny([CtT, TtC]);
+            await Task.WhenAll([CtT, TtC]);
 
-            await _sender.DisposeAsync();
-            await _parser.DisposeAsync();
-            await _socket.DisconnectAsync(false);
-            _socket.Dispose();
+            try {await _sender.DisposeAsync();} catch{}
+            try {await _parser.DisposeAsync();} catch{}
 
             _cts.Dispose();
         }
@@ -112,18 +111,24 @@ namespace Nothing.Client
 
         private async Task FromClientToServer()
         {
-            await foreach(var content in _parser.OutputFromSocks.Reader.ReadAllAsync(_cts.Token))
-            {// аналогично, шифрование можно расположить именно здесь
-                await _sender.SendToServer(Cat.Pack(new Cat(_myCrypto.Encrypt(content), Cat.Type.Meat)));
-            }
+            try{
+                await foreach(var content in _parser.OutputFromSocks.Reader.ReadAllAsync(_cts.Token))
+                {// аналогично, шифрование можно расположить именно здесь
+                    await _sender.SendToServer(Cat.Pack(new Cat(_myCrypto.Encrypt(content), Cat.Type.Meat)));
+                }
+            }catch(TaskCanceledException){}
+            catch(OperationCanceledException){}
         }
 
         private async Task FromServerToClient()
         {
-            await foreach(var content in _sender.OutFromServer.Reader.ReadAllAsync(_cts.Token))
-            {// аналогично, шифрование можно расположить именно здесь
-                await _parser.Reading(_myCrypto.Decript(content));
-            }
+            try{
+                await foreach(var content in _sender.OutFromServer.Reader.ReadAllAsync(_cts.Token))
+                {// аналогично, шифрование можно расположить именно здесь
+                    await _parser.Reading(_myCrypto.Decript(content));
+                }
+            }catch(TaskCanceledException){}
+            catch(OperationCanceledException){}
         }
     }
 }

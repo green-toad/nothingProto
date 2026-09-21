@@ -74,42 +74,48 @@ namespace Nothing.Server
             _cts.Cancel();
 
             await Task.WhenAll(CtT, TtC);
-            await _listener.DisposeAsync();
-            await _sender.DisposeAsync();
+            try {await _listener.DisposeAsync();} catch{}
+            try {await _sender.DisposeAsync();} catch{}
             _cts.Dispose();
         }
 
         private async Task FromClientToTarget()
         {
-            await foreach (var message in _listener.OutputMessage.Reader.ReadAllAsync(_cts.Token))
-            {
-                try{
-                // скорее всего именно суды мы вставим расшифровку, если конечно не будем (а точнее пока не) сувать ее в подкопотню нетдрайвера
-                    await _sender.Request(_myCrypto.Decript(message));
-                }
-                catch (Exception e)
+            try{
+                await foreach (var message in _listener.OutputMessage.Reader.ReadAllAsync(_cts.Token))
                 {
-                    Console.Write(e + "\n");
-                    _disconnectEvent(_socket);
+                    try{
+                    // скорее всего именно суды мы вставим расшифровку, если конечно не будем (а точнее пока не) сувать ее в подкопотню нетдрайвера
+                        await _sender.Request(_myCrypto.Decript(message));
+                    }
+                    catch (Exception e)
+                    {
+                        Console.Write(e + "\n");
+                        _disconnectEvent(_socket);
+                    }
                 }
-            }
+            }catch(TaskCanceledException){}
+            catch(OperationCanceledException){}
         }
 
         private async Task FromTargetToClient()
         {
-            await foreach (var message in _sender.OutputStream.Reader.ReadAllAsync(_cts.Token))
-            {
-                try
+            try{
+                await foreach (var message in _sender.OutputStream.Reader.ReadAllAsync(_cts.Token))
                 {
-                    // аналогично с шифрованием и здесь
-                    await _listener.SendResultData(Cat.Pack(new Cat(_myCrypto.Encrypt(message), Cat.Type.Meat)));
+                    try
+                    {
+                        // аналогично с шифрованием и здесь
+                        await _listener.SendResultData(Cat.Pack(new Cat(_myCrypto.Encrypt(message), Cat.Type.Meat)));
+                    }
+                    catch (Exception e)
+                    {
+                        Console.Write(e + "\n");
+                        _disconnectEvent(_socket);
+                    }
                 }
-                catch (Exception e)
-                {
-                    Console.Write(e + "\n");
-                    _disconnectEvent(_socket);
-                }
-            }
+            }catch(TaskCanceledException){}
+            catch(OperationCanceledException){}
         }
     }
 }

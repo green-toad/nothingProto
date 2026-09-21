@@ -43,16 +43,24 @@ namespace Nothing.Server
         {
             await foreach(var sock in _deathQueue.Reader.ReadAllAsync(_cts.Token))
             {
-                if (_connections.TryRemove(sock, out var res))
-                {
-                    Console.Write("kill connection\n");
-                    await res.DisposeAsync();
-                }
+                try{
+                    if (_connections.TryRemove(sock, out var res))
+                    {
+                        Console.Write("kill connection\n");
+                        try{
+                            await res.DisposeAsync();
+                        }
+                        catch(TaskCanceledException)
+                        {}
+                        catch(Exception e){Console.Write(e + "\n");}
+                    }
+                }catch(Exception e){Console.Write(e + "\n");}
             }
         }
 
         private void DisconnectSync(Socket socket)
         {
+            Console.Write("вызвали смерть!");
             _deathQueue.Writer.WriteAsync(socket); // оно считай синхронно, ибо канал не ограниченый
         }
 
