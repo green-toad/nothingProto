@@ -34,8 +34,7 @@ namespace Nothing.Client
             Console.Write("создан мост\n");
             _socket = socket;
             // _socket.Connect(new IPEndPoint(IPAddress.Parse("127.0.0.1"), 22233)); // тесты
-            // _socket.Connect(new IPEndPoint(IPAddress.Parse("144.31.71.55"), 22233)); // прод
-            _socket.Connect(new IPEndPoint(IPAddress.Parse("81.29.149.18"), 22233)); // прод
+            _socket.Connect(new IPEndPoint(IPAddress.Parse("77.110.111.222"), 22233)); // прод
 
             _disconnect = disconnect;
             _cryptoDevice = new();
