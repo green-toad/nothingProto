@@ -31,11 +31,16 @@ namespace Nothing.Client
 
         public Bridge(Socket socket, TcpClient client, DisconnectEvent disconnect)
         {
-            Console.Write("создан мост\n");
+            Console.Write("\n\tВведи IPv4 сервера: ");
+            string? serverIp = null;
+            while (string.IsNullOrEmpty(serverIp))
+                serverIp = Console.ReadLine();
+
             _socket = socket;
             // _socket.Connect(new IPEndPoint(IPAddress.Parse("127.0.0.1"), 22233)); // тесты
-            _socket.Connect(new IPEndPoint(IPAddress.Parse("77.110.111.222"), 22233)); // прод
-
+            _socket.Connect(new IPEndPoint(IPAddress.Parse(serverIp), 22233)); // прод
+            Console.Write("создан мост\n");
+            
             _disconnect = disconnect;
             _cryptoDevice = new();
             _sender = new(disconnect, _socket);
