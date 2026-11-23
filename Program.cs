@@ -22,7 +22,14 @@ namespace Nothing
             else
             {
                 Console.Write("Запущен клиент\n");
-                var a = new Client.Client();
+
+                string? serverIp = null;
+                while (string.IsNullOrEmpty(serverIp))
+                {
+                    Console.Write("\nВведи IPv4 сервера: ");
+                    serverIp = Console.ReadLine();
+                }
+                var a = new Client.Client(serverIp);
 
                 Console.ReadKey();
 

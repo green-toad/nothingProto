@@ -17,8 +17,11 @@ namespace Nothing.Client
         private readonly CancellationTokenSource _cts = new();
         private readonly Task _accepter;
         private readonly Task _killer;
-        public Client()
+        private readonly string _target;
+        public Client(string target)
         {
+            _target = target;
+
             _listener = new TcpListener(IPAddress.Parse("127.0.0.1"), 8088);
             _listener.Start();
 
@@ -33,7 +36,8 @@ namespace Nothing.Client
                 var client = await _listener.AcceptTcpClientAsync(_cts.Token);
                 var sock = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
                 var bridge = new Bridge(sock, client, Disconnect);
-                await bridge.Iitalize();
+
+                await bridge.Iitalize(_target);
                 _connections.TryAdd(sock, bridge);
             }
         }

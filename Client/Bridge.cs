@@ -4,7 +4,6 @@ using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 using AVcontrol;
-using JabrAPI;
 using NetDriver.AE;
 using Nothing.Cryptography;
 using Nothing.Message;
@@ -31,32 +30,27 @@ namespace Nothing.Client
 
         public Bridge(Socket socket, TcpClient client, DisconnectEvent disconnect)
         {
-            Console.Write("\n\tВведи IPv4 сервера: ");
-            string? serverIp = null;
-            while (string.IsNullOrEmpty(serverIp))
-                serverIp = Console.ReadLine();
-
             _socket = socket;
-            // _socket.Connect(new IPEndPoint(IPAddress.Parse("127.0.0.1"), 22233)); // тесты
-            _socket.Connect(new IPEndPoint(IPAddress.Parse(serverIp), 22233)); // прод
-            Console.Write("создан мост\n");
-            
+
             _disconnect = disconnect;
             _cryptoDevice = new();
             _sender = new(disconnect, _socket);
-
-            
 
             _parser = new(client, AcceptTarget);
             if (! _parser.Initalize().Result) disconnect(socket);
             _parser.working.ContinueWith((Task tsk) => {disconnect(socket);});
 
-            
+
             TtC = Task.Run(FromServerToClient);
         }
 
-        public async Task Iitalize() // необходимо вызвать при создании
+        public async Task Iitalize(string adress) // необходимо вызвать при создании
         {
+
+            // _socket.Connect(new IPEndPoint(IPAddress.Parse("127.0.0.1"), 22233)); // тесты
+            _socket.Connect(new IPEndPoint(IPAddress.Parse(adress), 22233)); // прод
+            Console.Write("создан мост\n");
+
             var otherKey = await _sender.SendWithAnswer(
                 Cat.Pack(
                     new Cat(
@@ -70,7 +64,7 @@ namespace Nothing.Client
             _cryptoDevice.ComputeSharedSecret(otherKey);
             #pragma warning restore CS8604
 
-            
+
             if ((await _sender.SendWithAnswer(
                 Cat.Pack(
                     new Cat(
